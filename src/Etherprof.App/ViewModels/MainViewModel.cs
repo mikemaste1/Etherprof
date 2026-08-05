@@ -24,6 +24,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public WifiPanelViewModel WifiPanel { get; }
     public SpeedTestPanelViewModel SpeedTestPanel { get; }
+    public StreamPanelViewModel StreamPanel { get; }
+    public StreamServerPanelViewModel StreamServerPanel { get; }
 
     private NetworkAdapterState? _adapterState;
     private bool _isRefreshing;
@@ -105,6 +107,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         AppSettings settings,
         WifiPanelViewModel wifiPanel,
         SpeedTestPanelViewModel speedTestPanel,
+        StreamPanelViewModel streamPanel,
+        StreamServerPanelViewModel streamServerPanel,
         ILogger<MainViewModel> logger)
     {
         _adapterProvider = adapterProvider;
@@ -116,6 +120,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _settings = settings;
         WifiPanel = wifiPanel;
         SpeedTestPanel = speedTestPanel;
+        StreamPanel = streamPanel;
+        StreamServerPanel = streamServerPanel;
         _logger = logger;
         _dispatcher = Dispatcher.CurrentDispatcher;
 
@@ -235,6 +241,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             CurrentIp = "No IPv4";
 
         DhcpStatus = _adapterState.IsDhcpEnabled ? "DHCP" : "Static";
+        StreamPanel.SetAdapterContext(_adapterState?.IPv4Address);
     }
 
     private void UpdateActiveProfile()

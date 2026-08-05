@@ -21,6 +21,7 @@
     <ProjectReference Include="..\Etherprof.Testing\Etherprof.Testing.csproj" />
     <ProjectReference Include="..\Etherprof.Wifi.Windows\Etherprof.Wifi.Windows.csproj" />
     <ProjectReference Include="..\Etherprof.SpeedTest\Etherprof.SpeedTest.csproj" />
+    <ProjectReference Include="..\Etherprof.StreamTest\Etherprof.StreamTest.csproj" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
   </ItemGroup>
 </Project>

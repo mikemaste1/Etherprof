@@ -14,6 +14,8 @@ public partial class App : Application
 {
     private INetworkAdapterProvider? _adapterProvider;
     private ITestRunner? _testRunner;
+    private Etherprof.StreamTest.Abstractions.IStreamTestClient? _streamClient;
+    private Etherprof.StreamTest.Abstractions.IStreamTestServer? _streamServer;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -65,10 +67,24 @@ public partial class App : Application
                 wifiPanelVm,
                 loggerFactory.CreateLogger<SpeedTestPanelViewModel>());
 
+            // StreamTest Services (v0.4)
+            _streamClient = new Etherprof.StreamTest.Client.StreamTestClient(loggerFactory.CreateLogger<Etherprof.StreamTest.Client.StreamTestClient>());
+            _streamServer = new Etherprof.StreamTest.Server.StreamTestServer(loggerFactory.CreateLogger<Etherprof.StreamTest.Server.StreamTestServer>());
+
             // Load persisted data
             var settings = await settingsRepo.LoadAsync();
             await profileManager.LoadAsync();
             await testSetManager.LoadAsync();
+
+            var streamPanelVm = new StreamPanelViewModel(_streamClient, wifiPanelVm, settingsRepo, settings, loggerFactory.CreateLogger<StreamPanelViewModel>());
+            var streamServerPanelVm = new StreamServerPanelViewModel(_streamServer, settingsRepo, settings, loggerFactory.CreateLogger<StreamServerPanelViewModel>());
+
+            // Check CLI switch --server
+            bool startServerMode = e.Args.Any(arg => string.Equals(arg, "--server", StringComparison.OrdinalIgnoreCase));
+            if (startServerMode)
+            {
+                _ = streamServerPanelVm.StartServerAsync();
+            }
 
             // Create main view model
             var mainVm = new MainViewModel(
@@ -81,6 +97,8 @@ public partial class App : Application
                 settings,
                 wifiPanelVm,
                 speedTestPanelVm,
+                streamPanelVm,
+                streamServerPanelVm,
                 loggerFactory.CreateLogger<MainViewModel>());
 
             // Show main window
@@ -101,8 +119,10 @@ public partial class App : Application
         }
     }
 
-    protected override void OnExit(ExitEventArgs e)
+    protected override async void OnExit(ExitEventArgs e)
     {
+        if (_streamClient is not null) await _streamClient.StopAsync();
+        if (_streamServer is not null) await _streamServer.StopAsync();
         (_testRunner as IDisposable)?.Dispose();
         _adapterProvider?.Dispose();
         base.OnExit(e);
