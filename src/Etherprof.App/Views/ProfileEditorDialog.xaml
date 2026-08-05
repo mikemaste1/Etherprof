@@ -1,0 +1,52 @@
+<Window x:Class="Etherprof.App.Views.ProfileEditorDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Profile" 
+        Width="360" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <StackPanel Margin="16" x:Name="rootPanel">
+        <TextBlock Text="Name" FontWeight="SemiBold" Margin="0,0,0,4" />
+        <TextBox x:Name="nameBox" Margin="0,0,0,12" />
+
+        <TextBlock Text="IP Mode" FontWeight="SemiBold" Margin="0,0,0,4" />
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <RadioButton x:Name="dhcpRadio" Content="DHCP" GroupName="IpType" Margin="0,0,12,0" Checked="OnIpTypeChanged" />
+            <RadioButton x:Name="staticRadio" Content="Static" GroupName="IpType" Margin="0,0,12,0" Checked="OnIpTypeChanged" />
+            <RadioButton x:Name="dnsOnlyRadio" Content="DNS Only" GroupName="IpType" Checked="OnIpTypeChanged" ToolTip="Keep current IP &amp; gateway, only change DNS" />
+        </StackPanel>
+
+        <StackPanel x:Name="staticPanel" Margin="0,0,0,8">
+            <TextBlock Text="Address" Margin="0,0,0,2" />
+            <TextBox x:Name="addressBox" FontFamily="Consolas" Margin="0,0,0,8" />
+
+            <TextBlock Text="Prefix Length" Margin="0,0,0,2" />
+            <TextBox x:Name="prefixBox" FontFamily="Consolas" Width="60" HorizontalAlignment="Left" Margin="0,0,0,8" />
+
+            <TextBlock Text="Gateway (optional)" Margin="0,0,0,2" />
+            <TextBox x:Name="gatewayBox" FontFamily="Consolas" Margin="0,0,0,4" />
+        </StackPanel>
+
+        <Separator Margin="0,4,0,8" />
+
+        <CheckBox x:Name="changeDnsCheck" Content="Configure DNS" Margin="0,0,0,6" Checked="OnDnsCheckChanged" Unchecked="OnDnsCheckChanged" />
+
+        <StackPanel x:Name="dnsPanel" Visibility="Collapsed" Margin="12,0,0,8">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                <RadioButton x:Name="dnsAutoRadio" Content="Automatic (DHCP)" GroupName="DnsModeGroup" Margin="0,0,12,0" Checked="OnDnsModeChanged" />
+                <RadioButton x:Name="dnsStaticRadio" Content="Manual DNS" GroupName="DnsModeGroup" Checked="OnDnsModeChanged" />
+            </StackPanel>
+
+            <StackPanel x:Name="dnsServersPanel" Margin="0,4,0,0">
+                <TextBlock Text="DNS 1" Margin="0,0,0,2" />
+                <TextBox x:Name="dns1Box" FontFamily="Consolas" Margin="0,0,0,6" />
+                <TextBlock Text="DNS 2 (optional)" Margin="0,0,0,2" />
+                <TextBox x:Name="dns2Box" FontFamily="Consolas" Margin="0,0,0,4" />
+            </StackPanel>
+        </StackPanel>
+
+        <TextBlock x:Name="errorText" Foreground="Red" FontSize="11" Margin="0,4,0,8" TextWrapping="Wrap" />
+
+        <Button Content="Save" Width="80" HorizontalAlignment="Right" Padding="8,4" Click="OnSave" />
+    </StackPanel>
+</Window>

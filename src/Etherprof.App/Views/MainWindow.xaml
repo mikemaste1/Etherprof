@@ -1,0 +1,407 @@
+<Window x:Class="Etherprof.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Etherprof.App.ViewModels"
+        xmlns:conv="clr-namespace:Etherprof.App.Converters"
+        Title="Etherprof" 
+        Width="520" Height="640"
+        MinWidth="440" MinHeight="480"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResizeWithGrip">
+    <Window.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVis" />
+        <conv:TestStatusToSymbolConverter x:Key="StatusToSymbol" />
+        <conv:TestStatusToBrushConverter x:Key="StatusToBrush" />
+
+        <!-- Profile button template -->
+        <DataTemplate DataType="{x:Type vm:ProfileButtonViewModel}">
+            <Button Command="{Binding DataContext.ApplyProfileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                    CommandParameter="{Binding}"
+                    ToolTip="{Binding StatusText}">
+                <Button.Content>
+                    <StackPanel>
+                        <TextBlock Text="{Binding DisplayText}" FontSize="12" />
+                        <TextBlock Text="{Binding StatusText}" FontSize="9" 
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   Visibility="{Binding StatusText, Converter={StaticResource BoolToVis}}" />
+                    </StackPanel>
+                </Button.Content>
+                <Button.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Edit" 
+                                  Command="{Binding DataContext.EditProfileCommand, Source={x:Reference mainGrid}}"
+                                  CommandParameter="{Binding}" />
+                        <MenuItem Header="Duplicate" 
+                                  Command="{Binding DataContext.DuplicateProfileCommand, Source={x:Reference mainGrid}}"
+                                  CommandParameter="{Binding}" />
+                        <Separator />
+                        <MenuItem Header="Delete" 
+                                  Command="{Binding DataContext.DeleteProfileCommand, Source={x:Reference mainGrid}}"
+                                  CommandParameter="{Binding}" />
+                    </ContextMenu>
+                </Button.ContextMenu>
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource ActionButton}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding State}" Value="Active">
+                                <Setter Property="BorderBrush" Value="{StaticResource ActiveBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding State}" Value="Applying">
+                                <Setter Property="BorderBrush" Value="{StaticResource ApplyingBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding State}" Value="Failed">
+                                <Setter Property="BorderBrush" Value="{StaticResource FailureBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </DataTemplate>
+
+        <!-- Test set button template -->
+        <DataTemplate DataType="{x:Type vm:TestSetButtonViewModel}">
+            <Button Command="{Binding DataContext.ToggleTestCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                    CommandParameter="{Binding}">
+                <TextBlock Text="{Binding DisplayText}" FontSize="12" />
+                <Button.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Edit" 
+                                  Command="{Binding DataContext.EditTestSetCommand, Source={x:Reference mainGrid}}"
+                                  CommandParameter="{Binding}" />
+                        <MenuItem Header="Duplicate" 
+                                  Command="{Binding DataContext.DuplicateTestSetCommand, Source={x:Reference mainGrid}}"
+                                  CommandParameter="{Binding}" />
+                        <Separator />
+                        <MenuItem Header="Delete" 
+                                  Command="{Binding DataContext.DeleteTestSetCommand, Source={x:Reference mainGrid}}"
+                                  CommandParameter="{Binding}" />
+                    </ContextMenu>
+                </Button.ContextMenu>
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource ActionButton}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource ActiveBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid x:Name="mainGrid" Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Row 0: Header -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,8">
+            <TextBlock Text="Etherprof" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button DockPanel.Dock="Right" Content="⚙" FontSize="14" Width="28" Height="28"
+                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Command="{Binding SelectAdapterCommand}" ToolTip="Select adapter" />
+        </DockPanel>
+
+        <!-- Row 1: Adapter info -->
+        <Border Grid.Row="1" Margin="0,0,0,8" Padding="8,6" 
+                BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3"
+                Visibility="{Binding HasSelectedAdapter, Converter={StaticResource BoolToVis}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0">
+                    <Hyperlink Command="{Binding SelectAdapterCommand}" TextDecorations="None">
+                        <Run Text="{Binding AdapterName, Mode=OneWay}" FontWeight="SemiBold" />
+                    </Hyperlink>
+                </TextBlock>
+                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="{Binding LinkStatus}" Foreground="{StaticResource SuccessBrush}" Margin="0,0,4,0" />
+                    <TextBlock Text="{Binding LinkSpeed}" Foreground="{StaticResource MutedTextBrush}" />
+                </StackPanel>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource IpDisplay}" 
+                           Text="{Binding CurrentIp}" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DhcpStatus}" 
+                           Foreground="{StaticResource MutedTextBrush}" HorizontalAlignment="Right" />
+            </Grid>
+        </Border>
+
+        <!-- Adapter unavailable notice -->
+        <TextBlock Grid.Row="1" Margin="0,0,0,8"
+                   Text="Adapter unavailable — click ⚙ to select" Foreground="{StaticResource FailureBrush}"
+                   Visibility="{Binding AdapterAvailable, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}" />
+
+        <!-- Row 2: IP section -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,8">
+            <TextBlock Text="IP" Style="{StaticResource SectionHeader}" />
+            <WrapPanel>
+                <ItemsControl ItemsSource="{Binding ProfileButtons}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+                <Button Style="{StaticResource AddButton}" Command="{Binding AddProfileCommand}" ToolTip="Add profile" />
+                <TextBlock Text="|" Foreground="#CCCCCC" VerticalAlignment="Center" Margin="8,0" />
+                <TextBox x:Name="quickIpTextBox" Style="{StaticResource QuickIpTextBox}"
+                         Text="{Binding QuickIpText, UpdateSourceTrigger=PropertyChanged}"
+                         IsEnabled="{Binding HasSelectedAdapter}"
+                         ToolTip="Type IP or IP/prefix and press Enter">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Return" Command="{Binding ApplyQuickIpCommand}" />
+                    </TextBox.InputBindings>
+                </TextBox>
+            </WrapPanel>
+            <TextBlock Text="{Binding QuickIpError}" Foreground="{StaticResource FailureBrush}" FontSize="11"
+                       Margin="0,2,0,0"
+                       Visibility="{Binding HasQuickIpError, Converter={StaticResource BoolToVis}}" />
+        </StackPanel>
+
+        <!-- Row 3: TEST section -->
+        <StackPanel Grid.Row="3" Margin="0,0,0,8">
+            <TextBlock Text="TEST" Style="{StaticResource SectionHeader}" />
+            <WrapPanel>
+                <ItemsControl ItemsSource="{Binding TestSetButtons}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+                <Button Style="{StaticResource AddButton}" Command="{Binding AddTestSetCommand}" ToolTip="Add test set" />
+            </WrapPanel>
+        </StackPanel>
+
+        <!-- Row 4: WIFI section -->
+        <StackPanel Grid.Row="4" Margin="0,0,0,8" DataContext="{Binding WifiPanel}">
+            <TextBlock Text="WIFI" Style="{StaticResource SectionHeader}" />
+
+            <!-- Non-Wi-Fi adapter -->
+            <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource MutedTextBrush}" FontSize="12"
+                       Visibility="{Binding IsNotWifiAdapter, Converter={StaticResource BoolToVis}}" Margin="0,2,0,4" />
+
+            <!-- Wi-Fi adapter section -->
+            <StackPanel Visibility="{Binding IsWifiAdapter, Converter={StaticResource BoolToVis}}">
+
+                <!-- Disconnected notice -->
+                <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource MutedTextBrush}" FontSize="12"
+                           Visibility="{Binding IsConnected, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"
+                           Margin="0,2,0,4" />
+
+                <!-- Permission denied notice -->
+                <StackPanel Visibility="{Binding IsPermissionDenied, Converter={StaticResource BoolToVis}}" Margin="0,2,0,4">
+                    <Button Content="Open Windows location settings" Style="{StaticResource ActionButton}"
+                            Command="{Binding OpenLocationSettingsCommand}" HorizontalAlignment="Left" Margin="0,4,0,0" />
+                </StackPanel>
+
+                <!-- Connected telemetry card -->
+                <Border Padding="8,6" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3" Margin="0,2,0,6"
+                        Visibility="{Binding IsConnected, Converter={StaticResource BoolToVis}}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- SSID -->
+                        <TextBlock Grid.Row="0" Text="{Binding Ssid}" FontWeight="SemiBold" FontSize="14" Foreground="#111827" Margin="0,0,0,4" />
+
+                        <!-- AP Alias & BSSID -->
+                        <DockPanel Grid.Row="1" Margin="0,0,0,4">
+                            <StackPanel DockPanel.Dock="Left">
+                                <TextBlock Text="{Binding CurrentBssidAlias}" FontWeight="Medium" FontSize="12"
+                                           Visibility="{Binding HasAlias, Converter={StaticResource BoolToVis}}" />
+                                <TextBlock Text="{Binding Bssid}" FontFamily="Consolas" FontSize="11" Foreground="{StaticResource MutedTextBrush}" />
+                            </StackPanel>
+                            <Button DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Content="Label" Style="{StaticResource ActionButton}" Padding="8,2" FontSize="11"
+                                    Command="{Binding EditAliasCommand}" ToolTip="Assign or edit AP label" />
+                        </DockPanel>
+
+                        <!-- Signal metrics & Band/Channel -->
+                        <Grid Grid.Row="2" Margin="0,2,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding SignalCombinedText}" FontSize="12" FontWeight="SemiBold" Foreground="#374151" />
+                            <TextBlock Grid.Column="1" Text="{Binding BandChannelText}" FontSize="12" Foreground="{StaticResource MutedTextBrush}" HorizontalAlignment="Right" />
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- Event log -->
+                <TextBlock Text="RECENT" FontSize="10" FontWeight="Bold" Foreground="{StaticResource MutedTextBrush}" Margin="0,4,0,2"
+                           Visibility="{Binding WifiEvents.Count, Converter={StaticResource BoolToVis}}" />
+
+                <ScrollViewer MaxHeight="100" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                              Visibility="{Binding WifiEvents.Count, Converter={StaticResource BoolToVis}}">
+                    <ItemsControl ItemsSource="{Binding WifiEvents}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="85" />
+                                        <ColumnDefinition Width="115" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding TimestampText}" FontFamily="Consolas" FontSize="10" Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding TypeText}" FontWeight="SemiBold" FontSize="10" Foreground="#2563EB" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2" Text="{Binding DetailsText}" FontSize="11" Foreground="#1F2937" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Row 5: SPEEDTEST section -->
+        <StackPanel Grid.Row="5" Margin="0,0,0,8" DataContext="{Binding SpeedTestPanel}">
+            <TextBlock Text="SPEEDTEST" Style="{StaticResource SectionHeader}" />
+
+            <!-- Size buttons & Download / Upload / Stop controls -->
+            <Grid Margin="0,2,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Size selector -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button Content="1 MiB" Style="{StaticResource ActionButton}" Padding="8,3" FontSize="11" Margin="0,0,4,0"
+                            Command="{Binding SelectSizeCommand}" CommandParameter="1048576" />
+                    <Button Content="10 MiB" Style="{StaticResource ActionButton}" Padding="8,3" FontSize="11" Margin="0,0,4,0"
+                            Command="{Binding SelectSizeCommand}" CommandParameter="10485760" />
+                    <Button Content="100 MiB" Style="{StaticResource ActionButton}" Padding="8,3" FontSize="11"
+                            Command="{Binding SelectSizeCommand}" CommandParameter="104857600" />
+                </StackPanel>
+
+                <!-- Download / Upload / Stop Buttons -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button Padding="10,3" FontWeight="SemiBold" FontSize="11" Margin="0,0,6,0">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ActionButton}">
+                                <Setter Property="Command" Value="{Binding RunDownloadCommand}" />
+                                <Setter Property="Content" Value="↓ DOWNLOAD" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDownloading}" Value="True">
+                                        <Setter Property="Command" Value="{Binding StopCommand}" />
+                                        <Setter Property="Content" Value="■ STOP" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <Button Padding="10,3" FontWeight="SemiBold" FontSize="11">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ActionButton}">
+                                <Setter Property="Command" Value="{Binding RunUploadCommand}" />
+                                <Setter Property="Content" Value="↑ UPLOAD" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsUploading}" Value="True">
+                                        <Setter Property="Command" Value="{Binding StopCommand}" />
+                                        <Setter Property="Content" Value="■ STOP" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- Active transfer status card -->
+            <Border Padding="8,6" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3" Margin="0,2,0,4"
+                    Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" Text="{Binding StatusText}" FontWeight="Bold" FontSize="13" Foreground="#2563EB" />
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding ProgressDetailText}" FontSize="12" Foreground="{StaticResource MutedTextBrush}" HorizontalAlignment="Right" />
+                </DockPanel>
+            </Border>
+
+            <!-- Latest completion summary text if not running -->
+            <TextBlock Text="{Binding ProgressDetailText}" FontSize="11" Foreground="#374151" Margin="0,2,0,4"
+                       Visibility="{Binding IsIdle, Converter={StaticResource BoolToVis}}" />
+
+            <!-- Recent speed tests list -->
+            <TextBlock Text="RECENT SPEED TESTS" FontSize="10" FontWeight="Bold" Foreground="{StaticResource MutedTextBrush}" Margin="0,4,0,2"
+                       Visibility="{Binding RecentResults.Count, Converter={StaticResource BoolToVis}}" />
+
+            <ScrollViewer MaxHeight="100" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Visibility="{Binding RecentResults.Count, Converter={StaticResource BoolToVis}}">
+                <ItemsControl ItemsSource="{Binding RecentResults}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition Width="80" />
+                                    <ColumnDefinition Width="65" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="60" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding DirectionSymbol}" FontWeight="Bold" Foreground="#2563EB" FontSize="11" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="{Binding MbpsText}" FontWeight="SemiBold" FontSize="11" Foreground="#111827" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Text="{Binding SizeText}" FontSize="11" Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3" Text="{Binding ContextText}" FontSize="11" Foreground="#374151" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="4" Text="{Binding RssiText}" FontSize="11" Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="5" Text="{Binding RoamWarningText}" FontSize="10" FontWeight="Bold" Foreground="#DC2626" VerticalAlignment="Center" Margin="4,0,0,0" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </StackPanel>
+
+        <!-- Row 6: Test results -->
+        <Border Grid.Row="6" Padding="8,6" 
+                BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3"
+                Visibility="{Binding TestResultsVisible, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <TextBlock Text="{Binding ActiveTestSetName}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4" />
+                <ItemsControl ItemsSource="{Binding TestResults}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding TargetName}" Style="{StaticResource TestResultName}" />
+                                <TextBlock Grid.Column="1" Text="{Binding StatusSymbol}" 
+                                           Foreground="{Binding Status, Converter={StaticResource StatusToBrush}}"
+                                           FontWeight="Bold" />
+                                <TextBlock Grid.Column="2" Text="{Binding LatencyText}" Style="{StaticResource TestResultValue}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

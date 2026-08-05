@@ -1,0 +1,19 @@
+# .NET build output
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Published application at repository root
+/Etherprof.exe
+
+# Logs/temp
+*.log
+*.tmp
+
+# Environment/secrets
+.env
+.env.*

@@ -1,0 +1,68 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Colors -->
+    <SolidColorBrush x:Key="SuccessBrush" Color="#2E7D32" />
+    <SolidColorBrush x:Key="FailureBrush" Color="#C62828" />
+    <SolidColorBrush x:Key="ActiveBrush" Color="#1565C0" />
+    <SolidColorBrush x:Key="ApplyingBrush" Color="#F57F17" />
+    <SolidColorBrush x:Key="MutedTextBrush" Color="#757575" />
+    <SolidColorBrush x:Key="SectionHeaderBrush" Color="#424242" />
+
+    <!-- Monospace font for IP addresses -->
+    <FontFamily x:Key="MonoFont">Consolas</FontFamily>
+
+    <!-- Section header style -->
+    <Style x:Key="SectionHeader" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource SectionHeaderBrush}" />
+        <Setter Property="Margin" Value="0,12,0,4" />
+    </Style>
+
+    <!-- Profile/test button base style -->
+    <Style x:Key="ActionButton" TargetType="Button">
+        <Setter Property="MinWidth" Value="70" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Margin" Value="0,0,4,0" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <!-- Add button style -->
+    <Style x:Key="AddButton" TargetType="Button" BasedOn="{StaticResource ActionButton}">
+        <Setter Property="Content" Value="+" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="MinWidth" Value="28" />
+    </Style>
+
+    <!-- Quick IP text box style -->
+    <Style x:Key="QuickIpTextBox" TargetType="TextBox">
+        <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="MinWidth" Value="160" />
+        <Setter Property="Padding" Value="4,3" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
+    <!-- Adapter info IP display -->
+    <Style x:Key="IpDisplay" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+        <Setter Property="FontSize" Value="13" />
+    </Style>
+
+    <!-- Test result row style -->
+    <Style x:Key="TestResultName" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="MinWidth" Value="100" />
+        <Setter Property="Margin" Value="0,1" />
+    </Style>
+
+    <Style x:Key="TestResultValue" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Margin" Value="8,1,0,1" />
+    </Style>
+</ResourceDictionary>
