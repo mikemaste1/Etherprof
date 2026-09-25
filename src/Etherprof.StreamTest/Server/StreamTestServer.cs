@@ -51,13 +51,40 @@ public sealed class StreamTestServer : IStreamTestServer
 
         try
         {
-            _tcpListener = new TcpListener(IPAddress.Any, port);
-            _tcpListener.Start();
+            if (port == 0)
+            {
+                for (int attempt = 0; attempt < 10; attempt++)
+                {
+                    try
+                    {
+                        _tcpListener = new TcpListener(IPAddress.Any, 0);
+                        _tcpListener.Start();
+                        _boundPort = ((IPEndPoint)_tcpListener.LocalEndpoint).Port;
 
-            _udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            _udpSocket.Bind(new IPEndPoint(IPAddress.Any, port));
+                        _udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                        _udpSocket.Bind(new IPEndPoint(IPAddress.Any, _boundPort));
+                        break;
+                    }
+                    catch (SocketException)
+                    {
+                        try { _tcpListener?.Stop(); } catch { }
+                        try { _udpSocket?.Dispose(); } catch { }
+                        if (attempt == 9) throw;
+                    }
+                }
+            }
+            else
+            {
+                int listenPort = port > 0 ? port : StreamProtocolConstants.DefaultPort;
+                _tcpListener = new TcpListener(IPAddress.Any, listenPort);
+                _tcpListener.Start();
+                _boundPort = ((IPEndPoint)_tcpListener.LocalEndpoint).Port;
 
-            _logger?.LogInformation("StreamTestServer started on 0.0.0.0:{Port} (TCP & UDP)", port);
+                _udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                _udpSocket.Bind(new IPEndPoint(IPAddress.Any, _boundPort));
+            }
+
+            _logger?.LogInformation("StreamTestServer started on 0.0.0.0:{Port} (TCP & UDP)", _boundPort);
 
             _ = Task.Run(() => AcceptTcpClientsAsync(_tcpListener, _cts.Token));
             _ = Task.Run(() => ListenUdpAsync(_udpSocket, _cts.Token));

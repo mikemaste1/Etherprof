@@ -48,9 +48,15 @@ public sealed class WindowsAdapterProvider : INetworkAdapterProvider
         }
 
         var props = ni.GetIPProperties();
-        var ipv4Addr = props.UnicastAddresses
-            .FirstOrDefault(a => a.Address.AddressFamily == AddressFamily.InterNetwork
-                && !a.Address.ToString().StartsWith("169.254")); // skip link-local
+        var validIpv4s = props.UnicastAddresses
+            .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork
+                && !a.Address.ToString().StartsWith("169.254")) // skip link-local
+            .ToList();
+
+        var ipv4Addr = validIpv4s.FirstOrDefault();
+        var additionalIpv4s = validIpv4s.Skip(1)
+            .Select(a => $"{a.Address}/{GetPrefixLength(a)}")
+            .ToList();
 
         var gateway = props.GatewayAddresses
             .FirstOrDefault(g => g.Address.AddressFamily == AddressFamily.InterNetwork
@@ -78,6 +84,7 @@ public sealed class WindowsAdapterProvider : INetworkAdapterProvider
             IsDnsAutomatic = isDnsAutomatic,
             IPv4Address = ipv4Addr?.Address.ToString(),
             PrefixLength = ipv4Addr is not null ? (byte?)GetPrefixLength(ipv4Addr) : null,
+            AdditionalIPv4Addresses = additionalIpv4s,
             Gateway = gateway?.Address.ToString(),
             DnsServers = dnsServers,
             LinkSpeed = linkSpeed

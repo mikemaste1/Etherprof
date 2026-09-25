@@ -15,9 +15,9 @@ public class StreamClientServerIntegrationTests
         await using var server = new StreamTestServer();
         Assert.False(server.IsRunning);
 
-        await server.StartAsync(port: 49199);
+        await server.StartAsync(port: 0);
         Assert.True(server.IsRunning);
-        Assert.Equal(49199, server.BoundPort);
+        Assert.True(server.BoundPort > 0);
 
         await server.StopAsync();
         Assert.False(server.IsRunning);
@@ -26,9 +26,9 @@ public class StreamClientServerIntegrationTests
     [Fact]
     public async Task TcpSendStream_LocalLoopback_Succeeds()
     {
-        int port = 49198;
         await using var server = new StreamTestServer();
-        await server.StartAsync(port);
+        await server.StartAsync(0);
+        int port = server.BoundPort;
 
         await using var client = new StreamTestClient();
         var request = new StreamTestRequest
@@ -55,9 +55,9 @@ public class StreamClientServerIntegrationTests
     [Fact]
     public async Task UdpReceiveStream_LocalLoopback_Succeeds()
     {
-        int port = 49197;
         await using var server = new StreamTestServer();
-        await server.StartAsync(port);
+        await server.StartAsync(0);
+        int port = server.BoundPort;
 
         await using var client = new StreamTestClient();
         var request = new StreamTestRequest
@@ -71,7 +71,10 @@ public class StreamClientServerIntegrationTests
         };
 
         await client.StartAsync(request);
-        await Task.Delay(1000);
+        for (int i = 0; i < 20 && client.CurrentStatistics.BytesTransferred == 0; i++)
+        {
+            await Task.Delay(100);
+        }
 
         var stats = client.CurrentStatistics;
         Assert.True(stats.BytesTransferred > 0);

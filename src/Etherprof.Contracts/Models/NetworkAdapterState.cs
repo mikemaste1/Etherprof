@@ -11,5 +11,6 @@ public sealed class NetworkAdapterState
     public byte? PrefixLength { get; init; }
     public string? Gateway { get; init; }
     public IReadOnlyList<string> DnsServers { get; init; } = [];
+    public IReadOnlyList<string> AdditionalIPv4Addresses { get; init; } = [];
     public string? LinkSpeed { get; init; }
 }

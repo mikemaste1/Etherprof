@@ -10,5 +10,11 @@ public interface INetworkConfigurationService
     Task<ApplyResult> ApplyTemporaryAddressAsync(
         string adapterId, IPv4Configuration config, CancellationToken ct = default);
 
+    Task<ApplyResult> MimicDhcpToStaticAsync(
+        string adapterId, CancellationToken ct = default);
+
+    Task<ApplyResult> AddAdditionalAddressAsync(
+        string adapterId, IPv4Configuration config, CancellationToken ct = default);
+
     Task<NetworkProfile> CaptureCurrentAsync(string adapterId);
 }

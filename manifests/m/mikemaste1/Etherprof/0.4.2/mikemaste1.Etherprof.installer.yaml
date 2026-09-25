@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+
+PackageIdentifier: mikemaste1.Etherprof
+PackageVersion: 0.4.2
+InstallerType: portable
+Commands:
+  - etherprof
+ElevationRequirement: elevationRequired
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/mikemaste1/Etherprof/releases/download/v0.4.2/Etherprof.exe
+    InstallerSha256: 9FB464B8883C0781DCDEFD9F4F4A7A0C7BCA1B9162072B1BF2EDD934E70D514C
+ManifestType: installer
+ManifestVersion: 1.6.0

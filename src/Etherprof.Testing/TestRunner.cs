@@ -19,6 +19,7 @@ public sealed class TestRunner : ITestRunner
 
     public bool IsRunning => _cts is not null && !_cts.IsCancellationRequested;
     public Guid? ActiveTestSetId { get; private set; }
+    public int IntervalMs { get; set; } = 1000;
     public IReadOnlyDictionary<Guid, TestResult> CurrentResults => _currentResults;
 
     public event EventHandler<TestResultUpdatedEventArgs>? ResultUpdated;
@@ -91,8 +92,8 @@ public sealed class TestRunner : ITestRunner
 
                 await Task.WhenAll(tasks);
 
-                // Wait ~1 second before next round
-                await Task.Delay(1000, ct);
+                // Wait interval (e.g. 1000ms standard, or 200ms quick ping) before next round
+                await Task.Delay(Math.Max(50, IntervalMs), ct);
             }
         }
         catch (OperationCanceledException)

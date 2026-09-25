@@ -136,4 +136,27 @@ public class TestRunnerTests
         runner.Stop();
         runner.Dispose();
     }
+
+    [Fact]
+    public async Task QuickPing_UsesConfiguredInterval()
+    {
+        var mock = new MockConnectivityTest { Delay = TimeSpan.FromMilliseconds(5) };
+        var runner = new TestRunner(mock, NullLogger<TestRunner>.Instance)
+        {
+            IntervalMs = 80 // Quick ping pace
+        };
+        var testSet = CreateTestSet(1);
+
+        int updateCount = 0;
+        runner.ResultUpdated += (_, _) => Interlocked.Increment(ref updateCount);
+
+        await runner.StartAsync(testSet);
+        // In 400ms at ~85ms per round (5ms delay + 80ms interval), should execute at least 3 rounds
+        await Task.Delay(400);
+
+        runner.Stop();
+        runner.Dispose();
+
+        Assert.True(updateCount >= 3, $"Expected at least 3 ping updates in 400ms at 80ms interval, got {updateCount}");
+    }
 }

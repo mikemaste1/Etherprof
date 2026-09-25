@@ -218,6 +218,8 @@ public sealed class SpeedTestPanelViewModel : INotifyPropertyChangedHelper
         });
     }
 
+    public event EventHandler<SpeedTestResultViewModel>? TestCompleted;
+
     private void OnTestCompleted(object? sender, SpeedTestCompletedEventArgs e)
     {
         _dispatcher.BeginInvoke(() =>
@@ -251,6 +253,8 @@ public sealed class SpeedTestPanelViewModel : INotifyPropertyChangedHelper
                 {
                     RecentResults.RemoveAt(RecentResults.Count - 1);
                 }
+
+                TestCompleted?.Invoke(this, vm);
             }
         });
     }

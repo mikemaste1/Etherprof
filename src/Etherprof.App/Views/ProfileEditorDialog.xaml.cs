@@ -201,4 +201,115 @@ public partial class ProfileEditorDialog : Window
 
         DialogResult = true;
     }
+
+    private void OnPasteAddress(object sender, RoutedEventArgs e)
+    {
+        if (Clipboard.ContainsText())
+        {
+            string text = Clipboard.GetText().Trim();
+            if (!string.IsNullOrEmpty(text))
+            {
+                if (text.Contains('/'))
+                {
+                    var parts = text.Split('/');
+                    addressBox.Text = parts[0].Trim();
+                    if (parts.Length > 1 && int.TryParse(parts[1].Trim(), out _))
+                        prefixBox.Text = parts[1].Trim();
+                }
+                else
+                {
+                    addressBox.Text = text;
+                }
+            }
+        }
+    }
+
+    private void OnCopyAddress(object sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(addressBox.Text))
+            Clipboard.SetText(addressBox.Text.Trim());
+    }
+
+    private void OnPasteGateway(object sender, RoutedEventArgs e)
+    {
+        if (Clipboard.ContainsText())
+        {
+            string text = Clipboard.GetText().Trim();
+            if (!string.IsNullOrEmpty(text)) gatewayBox.Text = text;
+        }
+    }
+
+    private void OnCopyGateway(object sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(gatewayBox.Text))
+            Clipboard.SetText(gatewayBox.Text.Trim());
+    }
+
+    private void OnPasteDns1(object sender, RoutedEventArgs e)
+    {
+        if (Clipboard.ContainsText())
+        {
+            string text = Clipboard.GetText().Trim();
+            if (!string.IsNullOrEmpty(text)) dns1Box.Text = text;
+        }
+    }
+
+    private void OnCopyDns1(object sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(dns1Box.Text))
+            Clipboard.SetText(dns1Box.Text.Trim());
+    }
+
+    private void OnPasteDns2(object sender, RoutedEventArgs e)
+    {
+        if (Clipboard.ContainsText())
+        {
+            string text = Clipboard.GetText().Trim();
+            if (!string.IsNullOrEmpty(text)) dns2Box.Text = text;
+        }
+    }
+
+    private void OnCopyDns2(object sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(dns2Box.Text))
+            Clipboard.SetText(dns2Box.Text.Trim());
+    }
+
+    private void OnCopyProfile(object sender, RoutedEventArgs e)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"Profile: {nameBox.Text.Trim()}");
+        if (dhcpRadio.IsChecked == true)
+        {
+            sb.AppendLine("Mode: DHCP");
+        }
+        else if (dnsOnlyRadio.IsChecked == true)
+        {
+            sb.AppendLine("Mode: DNS Only");
+        }
+        else
+        {
+            sb.AppendLine("Mode: Static");
+            sb.AppendLine($"IP: {addressBox.Text.Trim()}/{prefixBox.Text.Trim()}");
+            if (!string.IsNullOrWhiteSpace(gatewayBox.Text))
+                sb.AppendLine($"Gateway: {gatewayBox.Text.Trim()}");
+        }
+
+        if (changeDnsCheck.IsChecked == true)
+        {
+            if (dnsAutoRadio.IsChecked == true)
+            {
+                sb.AppendLine("DNS: Automatic (DHCP)");
+            }
+            else
+            {
+                var dnsList = new List<string>();
+                if (!string.IsNullOrWhiteSpace(dns1Box.Text)) dnsList.Add(dns1Box.Text.Trim());
+                if (!string.IsNullOrWhiteSpace(dns2Box.Text)) dnsList.Add(dns2Box.Text.Trim());
+                sb.AppendLine($"DNS: {string.Join(", ", dnsList)}");
+            }
+        }
+
+        Clipboard.SetText(sb.ToString().TrimEnd());
+    }
 }

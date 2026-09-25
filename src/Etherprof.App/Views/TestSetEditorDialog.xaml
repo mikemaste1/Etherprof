@@ -2,17 +2,29 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Test Set" 
-        Width="400" SizeToContent="Height"
+        Width="460" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize">
     <StackPanel Margin="16">
-        <TextBlock Text="Name" FontWeight="SemiBold" Margin="0,0,0,4" />
-        <TextBox x:Name="nameBox" Margin="0,0,0,12" />
+        <TextBlock Text="Name / Label (optional)" FontWeight="SemiBold" Margin="0,0,0,4" />
+        <TextBox x:Name="nameBox" Margin="0,0,0,12" ToolTip="Optional label. If left blank, target host will be used." />
 
         <TextBlock Text="Targets" FontWeight="SemiBold" Margin="0,0,0,4" />
+        <Grid Margin="0,0,0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="130" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="80" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="Label (optional)" FontSize="10" Foreground="#666666" />
+            <TextBlock Grid.Column="1" Text="Host / IP Address" FontSize="10" Foreground="#666666" Margin="4,0,0,0" />
+        </Grid>
         <ItemsControl x:Name="targetsList" />
 
-        <Button Content="+ target" HorizontalAlignment="Left" Margin="0,4,0,12" Padding="8,4" Click="OnAddTarget" />
+        <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
+            <Button Content="+ Target" HorizontalAlignment="Left" Padding="8,4" Click="OnAddTarget" Margin="0,0,6,0" />
+            <Button Content="📋 Paste Target" HorizontalAlignment="Left" Padding="8,4" Click="OnPasteTarget" ToolTip="Paste IP or host from clipboard" />
+        </StackPanel>
 
         <TextBlock x:Name="errorText" Foreground="Red" FontSize="11" Margin="0,0,0,8" TextWrapping="Wrap" />
 

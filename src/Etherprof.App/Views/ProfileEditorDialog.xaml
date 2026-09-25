@@ -18,13 +18,33 @@
 
         <StackPanel x:Name="staticPanel" Margin="0,0,0,8">
             <TextBlock Text="Address" Margin="0,0,0,2" />
-            <TextBox x:Name="addressBox" FontFamily="Consolas" Margin="0,0,0,8" />
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="addressBox" FontFamily="Consolas" Grid.Column="0" />
+                <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="4,0,0,0">
+                    <Button Content="📋" Width="24" Height="24" FontSize="11" ToolTip="Paste IP / CIDR" Click="OnPasteAddress" />
+                    <Button Content="📄" Width="24" Height="24" FontSize="11" Margin="2,0,0,0" ToolTip="Copy Address" Click="OnCopyAddress" />
+                </StackPanel>
+            </Grid>
 
             <TextBlock Text="Prefix Length" Margin="0,0,0,2" />
             <TextBox x:Name="prefixBox" FontFamily="Consolas" Width="60" HorizontalAlignment="Left" Margin="0,0,0,8" />
 
             <TextBlock Text="Gateway (optional)" Margin="0,0,0,2" />
-            <TextBox x:Name="gatewayBox" FontFamily="Consolas" Margin="0,0,0,4" />
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="gatewayBox" FontFamily="Consolas" Grid.Column="0" />
+                <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="4,0,0,0">
+                    <Button Content="📋" Width="24" Height="24" FontSize="11" ToolTip="Paste Gateway" Click="OnPasteGateway" />
+                    <Button Content="📄" Width="24" Height="24" FontSize="11" Margin="2,0,0,0" ToolTip="Copy Gateway" Click="OnCopyGateway" />
+                </StackPanel>
+            </Grid>
         </StackPanel>
 
         <Separator Margin="0,4,0,8" />
@@ -39,14 +59,38 @@
 
             <StackPanel x:Name="dnsServersPanel" Margin="0,4,0,0">
                 <TextBlock Text="DNS 1" Margin="0,0,0,2" />
-                <TextBox x:Name="dns1Box" FontFamily="Consolas" Margin="0,0,0,6" />
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="dns1Box" FontFamily="Consolas" Grid.Column="0" />
+                    <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="4,0,0,0">
+                        <Button Content="📋" Width="24" Height="24" FontSize="11" ToolTip="Paste DNS 1" Click="OnPasteDns1" />
+                        <Button Content="📄" Width="24" Height="24" FontSize="11" Margin="2,0,0,0" ToolTip="Copy DNS 1" Click="OnCopyDns1" />
+                    </StackPanel>
+                </Grid>
+
                 <TextBlock Text="DNS 2 (optional)" Margin="0,0,0,2" />
-                <TextBox x:Name="dns2Box" FontFamily="Consolas" Margin="0,0,0,4" />
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="dns2Box" FontFamily="Consolas" Grid.Column="0" />
+                    <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="4,0,0,0">
+                        <Button Content="📋" Width="24" Height="24" FontSize="11" ToolTip="Paste DNS 2" Click="OnPasteDns2" />
+                        <Button Content="📄" Width="24" Height="24" FontSize="11" Margin="2,0,0,0" ToolTip="Copy DNS 2" Click="OnCopyDns2" />
+                    </StackPanel>
+                </Grid>
             </StackPanel>
         </StackPanel>
 
         <TextBlock x:Name="errorText" Foreground="Red" FontSize="11" Margin="0,4,0,8" TextWrapping="Wrap" />
 
-        <Button Content="Save" Width="80" HorizontalAlignment="Right" Padding="8,4" Click="OnSave" />
+        <DockPanel Margin="0,4,0,0">
+            <Button Content="📋 Copy Profile" DockPanel.Dock="Left" Padding="8,4" Click="OnCopyProfile" ToolTip="Copy profile settings summary to clipboard" />
+            <Button Content="Save" DockPanel.Dock="Right" HorizontalAlignment="Right" Width="80" Padding="8,4" Click="OnSave" />
+        </DockPanel>
     </StackPanel>
 </Window>

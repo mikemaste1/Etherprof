@@ -130,6 +130,87 @@ public sealed class PowerShellNetworkConfigurationService : INetworkConfiguratio
         }
     }
 
+    public async Task<ApplyResult> MimicDhcpToStaticAsync(string adapterId, CancellationToken ct = default)
+    {
+        var state = await _adapterProvider.GetStateAsync(adapterId);
+        if (string.IsNullOrEmpty(state.IPv4Address))
+            return ApplyResult.Failed("Adapter has no active IPv4 address to convert to static.");
+
+        _logger.LogInformation("[MimicDhcpToStatic] Converting active DHCP lease ({Address}/{Prefix}, GW={Gateway}) to static on adapter {AdapterId}",
+            state.IPv4Address, state.PrefixLength, state.Gateway, adapterId);
+
+        var staticProfile = new NetworkProfile
+        {
+            Id = Guid.NewGuid(),
+            Name = $"Static ({state.IPv4Address})",
+            Type = NetworkProfileType.Static,
+            IPv4 = new IPv4Configuration
+            {
+                Address = state.IPv4Address,
+                PrefixLength = state.PrefixLength ?? 24,
+                Gateway = state.Gateway
+            },
+            ApplyDns = state.DnsServers.Count > 0,
+            Dns = state.DnsServers.Count > 0
+                ? new DnsConfiguration { Mode = DnsMode.Static, Servers = state.DnsServers.ToList() }
+                : new DnsConfiguration { Mode = DnsMode.Automatic }
+        };
+
+        return await ApplyProfileAsync(adapterId, staticProfile, ct);
+    }
+
+    public async Task<ApplyResult> AddAdditionalAddressAsync(
+        string adapterId, IPv4Configuration config, CancellationToken ct = default)
+    {
+        int interfaceIndex = ResolveInterfaceIndex(adapterId);
+        if (interfaceIndex < 0)
+            return ApplyResult.Failed($"Adapter '{adapterId}' not found");
+
+        _logger.LogInformation("[AddAdditionalAddress] Address={Address}/{Prefix}, AdapterId={AdapterId}, InterfaceIndex={Index}",
+            config.Address, config.PrefixLength, adapterId, interfaceIndex);
+
+        try
+        {
+            // Add secondary address without removing existing addresses or default routes
+            var applyCmd = $"New-NetIPAddress -InterfaceIndex {interfaceIndex} -IPAddress '{config.Address}' -PrefixLength {config.PrefixLength} -SkipAsSource $false -ErrorAction Stop";
+            var result = await _ps.ExecuteAsync(applyCmd, "AddAdditionalAddress",
+                new Dictionary<string, string>
+                {
+                    ["InterfaceIndex"] = interfaceIndex.ToString(),
+                    ["Address"] = config.Address,
+                    ["PrefixLength"] = config.PrefixLength.ToString()
+                }, ct: ct);
+
+            if (!result.IsSuccess)
+                return ApplyResult.Failed($"Failed to add additional address: {result.Error}");
+
+            // Verification
+            await Task.Delay(500, ct);
+            var state = await _adapterProvider.GetStateAsync(adapterId);
+
+            bool found = string.Equals(state.IPv4Address, config.Address, StringComparison.OrdinalIgnoreCase)
+                || state.AdditionalIPv4Addresses.Any(a => a.StartsWith(config.Address + "/", StringComparison.OrdinalIgnoreCase));
+
+            if (!found)
+            {
+                return ApplyResult.VerificationFailed(
+                    $"Address {config.Address}/{config.PrefixLength} was not found on adapter after addition");
+            }
+
+            _logger.LogInformation("[AddAdditionalAddress] Success: added {Address}/{Prefix}", config.Address, config.PrefixLength);
+            return ApplyResult.Succeeded();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[AddAdditionalAddress] Failed");
+            return ApplyResult.Failed(ex.Message);
+        }
+    }
+
     public async Task<NetworkProfile> CaptureCurrentAsync(string adapterId)
     {
         var state = await _adapterProvider.GetStateAsync(adapterId);

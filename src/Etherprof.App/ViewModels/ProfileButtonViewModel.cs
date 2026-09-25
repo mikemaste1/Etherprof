@@ -27,10 +27,56 @@ public sealed class ProfileButtonViewModel : INotifyPropertyChanged
     {
         ProfileState.Applying => "Applying...",
         ProfileState.Failed => "Failed",
-        ProfileState.Active when Profile.Type == NetworkProfileType.Static && Profile.IPv4 is not null
-            => $"{Profile.IPv4.Address}/{Profile.IPv4.PrefixLength}",
-        _ => ""
+        _ => FormatSettingsSummary()
     };
+
+    private string FormatSettingsSummary()
+    {
+        if (Profile.Type == NetworkProfileType.Dhcp)
+        {
+            if (Profile.ApplyDns && Profile.Dns?.Servers.Count > 0)
+                return $"DHCP · DNS: {string.Join(", ", Profile.Dns.Servers)}";
+            return "DHCP";
+        }
+
+        if (Profile.Type == NetworkProfileType.Static && Profile.IPv4 is not null)
+        {
+            var parts = new List<string> { $"{Profile.IPv4.Address}/{Profile.IPv4.PrefixLength}" };
+            if (!string.IsNullOrEmpty(Profile.IPv4.Gateway))
+                parts.Add($"GW: {Profile.IPv4.Gateway}");
+            if (Profile.ApplyDns && Profile.Dns?.Servers.Count > 0)
+                parts.Add($"DNS: {string.Join(", ", Profile.Dns.Servers)}");
+            return string.Join(" · ", parts);
+        }
+
+        if (Profile.Type == NetworkProfileType.DnsOnly && Profile.Dns?.Servers.Count > 0)
+        {
+            return $"DNS: {string.Join(", ", Profile.Dns.Servers)}";
+        }
+
+        return "";
+    }
+
+    public string GetClipboardSummary()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"Profile: {Profile.Name}");
+        sb.AppendLine($"Type: {Profile.Type}");
+        if (Profile.Type == NetworkProfileType.Static && Profile.IPv4 != null)
+        {
+            sb.AppendLine($"IP: {Profile.IPv4.Address}/{Profile.IPv4.PrefixLength}");
+            if (!string.IsNullOrEmpty(Profile.IPv4.Gateway))
+                sb.AppendLine($"Gateway: {Profile.IPv4.Gateway}");
+        }
+        if (Profile.ApplyDns && Profile.Dns != null)
+        {
+            if (Profile.Dns.Mode == DnsMode.Static && Profile.Dns.Servers.Count > 0)
+                sb.AppendLine($"DNS: {string.Join(", ", Profile.Dns.Servers)}");
+            else
+                sb.AppendLine("DNS: Automatic");
+        }
+        return sb.ToString().TrimEnd();
+    }
 
     public ProfileButtonViewModel(NetworkProfile profile)
     {

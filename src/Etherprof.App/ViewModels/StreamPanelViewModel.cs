@@ -319,12 +319,15 @@ public sealed class StreamPanelViewModel : ViewModelBase
         });
     }
 
+    public event EventHandler<StreamTestStateChangedEventArgs>? StateChanged;
+
     private void OnClientStateChanged(object? sender, StreamTestStateChangedEventArgs e)
     {
         App.Current?.Dispatcher.InvokeAsync(() =>
         {
             State = e.NewState;
             UpdateEventLogUI();
+            StateChanged?.Invoke(this, e);
         });
     }
 

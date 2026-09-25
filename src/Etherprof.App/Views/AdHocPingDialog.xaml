@@ -1,0 +1,44 @@
+<Window x:Class="Etherprof.App.Views.AdHocPingDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Ad-hoc Ping" 
+        Width="440" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Loaded="OnLoaded">
+    <StackPanel Margin="16">
+        <TextBlock Text="Target Host / IP Address" FontWeight="SemiBold" Margin="0,0,0,2" />
+        <TextBlock x:Name="subnetHintText" Text="Prefilled from current interface subnet:" FontSize="10" Foreground="#64748B" Margin="0,0,0,6" />
+
+        <Grid Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="ipBox" FontFamily="Consolas" FontSize="13" Padding="4,2" Grid.Column="0" />
+            <Button Content="📋" Grid.Column="1" Width="26" Height="26" FontSize="11" Margin="4,0,0,0" ToolTip="Paste IP from clipboard" Click="OnPasteIp" />
+        </Grid>
+
+        <TextBlock Text="Label / Name (optional)" FontWeight="SemiBold" Margin="0,0,0,4" />
+        <TextBox x:Name="labelBox" Margin="0,0,0,12" ToolTip="Optional label. If left blank, the IP address will be used." />
+
+        <TextBlock x:Name="errorText" Foreground="Red" FontSize="11" Margin="0,0,0,8" TextWrapping="Wrap" />
+
+        <Grid Margin="0,4,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button Content="Cancel" Grid.Column="0" Width="60" Padding="6,3" IsCancel="True" />
+            
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="🌐 Browser" Width="85" Padding="6,3" Margin="0,0,4,0" ToolTip="Open target host in web browser (HTTP/HTTPS)" Click="OnOpenBrowser" />
+                <Button Content="🛤️ Traceroute" Width="95" Padding="6,3" Margin="0,0,4,0" ToolTip="Run traceroute to target host" Click="OnRunTraceroute" />
+                <Button Content="🎯 Ping" Width="75" Padding="8,3" FontWeight="Bold"
+                        Background="#DCFCE7" BorderBrush="#86EFAC" Foreground="#15803D"
+                        IsDefault="True" Click="OnStartPing" />
+            </StackPanel>
+        </Grid>
+    </StackPanel>
+</Window>

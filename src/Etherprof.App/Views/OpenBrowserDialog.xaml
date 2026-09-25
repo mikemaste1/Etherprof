@@ -1,0 +1,65 @@
+<Window x:Class="Etherprof.App.Views.OpenBrowserDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Open in Browser" 
+        Width="400" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Loaded="OnLoaded">
+    <StackPanel Margin="16">
+        <TextBlock Text="Open Web Interface" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,4" />
+        <TextBlock x:Name="hostDisplay" Text="Target Host: 192.168.1.1" FontSize="11" Foreground="#64748B" Margin="0,0,0,12" />
+
+        <!-- Protocol & Port Grid -->
+        <Grid Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Protocol -->
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Protocol" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,4" />
+            <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <RadioButton x:Name="httpRadio" Content="HTTP" IsChecked="True" FontSize="12" Margin="0,0,12,0" Checked="OnProtocolChanged" />
+                <RadioButton x:Name="httpsRadio" Content="HTTPS" FontSize="12" Checked="OnProtocolChanged" />
+            </StackPanel>
+
+            <!-- Port -->
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="Port" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,4" />
+            <TextBox x:Name="portBox" Grid.Row="1" Grid.Column="1" Text="80" FontFamily="Consolas" FontSize="12" Padding="4,2" Width="90" HorizontalAlignment="Left" TextChanged="OnPortChanged" />
+        </Grid>
+
+        <!-- Quick Port Presets -->
+        <DockPanel Margin="0,0,0,12">
+            <TextBlock Text="Presets:" FontSize="10" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,6,0" />
+            <WrapPanel>
+                <Button Content="80" Width="36" Padding="2,1" FontSize="10" Margin="0,0,4,0" Click="OnPresetClick" Tag="80" />
+                <Button Content="443" Width="36" Padding="2,1" FontSize="10" Margin="0,0,4,0" Click="OnPresetClick" Tag="443" />
+                <Button Content="8080" Width="40" Padding="2,1" FontSize="10" Margin="0,0,4,0" Click="OnPresetClick" Tag="8080" />
+                <Button Content="8443" Width="40" Padding="2,1" FontSize="10" Margin="0,0,4,0" Click="OnPresetClick" Tag="8443" />
+                <Button Content="3000" Width="40" Padding="2,1" FontSize="10" Margin="0,0,4,0" Click="OnPresetClick" Tag="3000" />
+            </WrapPanel>
+        </DockPanel>
+
+        <!-- URL Preview Card -->
+        <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,0,0,12">
+            <DockPanel>
+                <TextBlock Text="URL:" FontSize="10" FontWeight="Bold" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,6,0" />
+                <TextBlock x:Name="urlPreviewText" Text="http://192.168.1.1:80" FontFamily="Consolas" FontSize="12" FontWeight="SemiBold" Foreground="#0284C7" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+
+        <TextBlock x:Name="errorText" Foreground="Red" FontSize="11" Margin="0,0,0,8" TextWrapping="Wrap" />
+
+        <DockPanel Margin="0,4,0,0">
+            <Button Content="Cancel" DockPanel.Dock="Left" Width="70" Padding="6,3" IsCancel="True" />
+            <Button Content="🌐 Open Browser" DockPanel.Dock="Right" HorizontalAlignment="Right" Width="120" Padding="8,4" FontWeight="SemiBold"
+                    Background="#E0F2FE" BorderBrush="#7DD3FC" Foreground="#0369A1"
+                    IsDefault="True" Click="OnOpenBrowser" />
+        </DockPanel>
+    </StackPanel>
+</Window>

@@ -12,7 +12,11 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>Etherprof</AssemblyName>
     <RootNamespace>Etherprof.App</RootNamespace>
+    <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="app.ico" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Etherprof.Contracts\Etherprof.Contracts.csproj" />
     <ProjectReference Include="..\Etherprof.Core\Etherprof.Core.csproj" />

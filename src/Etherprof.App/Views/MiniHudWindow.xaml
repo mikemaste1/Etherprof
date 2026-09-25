@@ -1,0 +1,137 @@
+<Window x:Class="Etherprof.App.Views.MiniHudWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="clr-namespace:Etherprof.App.Converters"
+        Title="Etherprof Mini-HUD"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        SizeToContent="WidthAndHeight"
+        ResizeMode="NoResize"
+        MouseDown="OnWindowMouseDown"
+        MouseDoubleClick="OnWindowDoubleClick">
+
+    <Window.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVis" />
+        <Style x:Key="MiniHudIconButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#94A3B8" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="3" Padding="2">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#334155" />
+                                <Setter Property="Foreground" Value="#F8FAFC" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#475569" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1"
+            CornerRadius="8" Padding="8,4,8,4" Margin="6" SnapsToDevicePixels="True">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="12" Direction="270" Opacity="0.5" ShadowDepth="2" Color="#000000" />
+        </Border.Effect>
+
+        <Grid VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- 0: Drag Grip -->
+            <TextBlock Grid.Column="0" Text="⠿" FontSize="13" Foreground="#64748B"
+                       VerticalAlignment="Center" Margin="0,0,8,0" Cursor="SizeAll"
+                       ToolTip="Drag anywhere to move. Double-click to restore Etherprof" />
+
+            <!-- 1: Ping Elements / Targets -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <!-- Running: Show all ping elements/targets -->
+                <ItemsControl ItemsSource="{Binding TestResults}"
+                              Visibility="{Binding IsPingRunning, Converter={StaticResource BoolToVis}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Status Badge -->
+                                <Border Grid.Column="0" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
+                                        Background="{Binding StatusBrush}">
+                                    <TextBlock Text="{Binding StatusBadgeText}"
+                                               FontWeight="Bold" FontSize="11" Foreground="White" />
+                                </Border>
+
+                                <!-- Latency & Target -->
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,8,0">
+                                    <TextBlock Text="{Binding LatencyText, FallbackValue=-- ms}"
+                                               FontWeight="SemiBold" FontSize="12" Foreground="#F8FAFC"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding TargetName, StringFormat=' ({0})', FallbackValue=''}"
+                                               FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" Margin="2,0,0,0"
+                                               TextTrimming="CharacterEllipsis" MaxWidth="120" />
+                                </StackPanel>
+
+                                <!-- Mini Ping Trail -->
+                                <ItemsControl Grid.Column="2" ItemsSource="{Binding HistoryTicks}"
+                                              VerticalAlignment="Center" Margin="0,0,8,0">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Height="16" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Width="3" Height="{Binding BarHeight}" Margin="1,0"
+                                                    Background="{Binding Brush}" CornerRadius="1"
+                                                    VerticalAlignment="Bottom"
+                                                    ToolTip="{Binding ToolTipText}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Idle state: No test set active -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                            Visibility="{Binding IsPingRunning, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+                    <Border CornerRadius="4" Padding="6,2" VerticalAlignment="Center" Background="#64748B">
+                        <TextBlock Text="IDLE" FontWeight="Bold" FontSize="11" Foreground="White" />
+                    </Border>
+                    <TextBlock Text="No active ping test" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" Margin="8,0,8,0" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- 2: Window Buttons -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="🗖" Click="OnRestoreClicked" Style="{StaticResource MiniHudIconButton}"
+                        FontSize="10" Width="18" Height="18" Margin="0,0,2,0"
+                        ToolTip="Restore Etherprof window" />
+                <Button Content="✕" Click="OnCloseClicked" Style="{StaticResource MiniHudIconButton}"
+                        FontSize="10" Width="18" Height="18"
+                        ToolTip="Close Mini-HUD" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

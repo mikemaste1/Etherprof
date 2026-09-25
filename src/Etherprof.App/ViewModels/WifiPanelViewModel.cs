@@ -292,6 +292,8 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
         });
     }
 
+    public event EventHandler<WifiEventViewModel>? EventLogged;
+
     private void AddEventToLog(WifiEvent wifiEvent)
     {
         _eventLog.Add(wifiEvent);
@@ -304,6 +306,8 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
         {
             WifiEvents.RemoveAt(WifiEvents.Count - 1);
         }
+
+        EventLogged?.Invoke(this, vm);
     }
 
     private void RegisterBssidIfUnseen(string bssid)
