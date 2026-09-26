@@ -17,3 +17,7 @@
 # Environment/secrets
 .env
 .env.*
+
+# Build and release artifacts
+publish/
+artifacts/

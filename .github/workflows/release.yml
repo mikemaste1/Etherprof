@@ -1,0 +1,80 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build Installer & Publish Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install Inno Setup
+        run: |
+          choco install innosetup --no-progress
+          echo "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
+
+      - name: Extract Version from Tag
+        id: get_version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $ver = $tag.TrimStart('v')
+          echo "RELEASE_VERSION=$ver" >> $env:GITHUB_ENV
+          Write-Host "Target Version: $ver"
+
+      - name: Build Release & Inno Setup Installer
+        shell: pwsh
+        run: |
+          .\build-release.ps1 -Version ${{ env.RELEASE_VERSION }}
+
+      - name: Calculate SHA-256 Hash
+        id: hash
+        shell: pwsh
+        run: |
+          $installerPath = "artifacts\Etherprof-Setup-${{ env.RELEASE_VERSION }}.exe"
+          $hash = (Get-FileHash -Algorithm SHA256 $installerPath).Hash
+          echo "INSTALLER_SHA256=$hash" >> $env:GITHUB_ENV
+          Write-Host "SHA256: $hash"
+
+      - name: Create GitHub Release & Attach Installer
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Etherprof v${{ env.RELEASE_VERSION }}
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/Etherprof-Setup-${{ env.RELEASE_VERSION }}.exe
+          body: |
+            ## Etherprof v${{ env.RELEASE_VERSION }}
+
+            ### Release Assets
+            - **Installer**: `Etherprof-Setup-${{ env.RELEASE_VERSION }}.exe`
+            - **SHA-256**: `${{ env.INSTALLER_SHA256 }}`
+
+            ### Installation via WinGet
+            ```powershell
+            winget install mikemaste1.Etherprof
+            ```
+            To upgrade from an earlier version:
+            ```powershell
+            winget upgrade mikemaste1.Etherprof
+            ```
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -90,44 +90,38 @@ To update in the future:
 winget upgrade mikemaste1.Etherprof
 ```
 
-### Method 2: Portable Single-File Download
+### Method 2: Inno Setup Installer Download
 1. Head to the **[Latest Release](https://github.com/mikemaste1/Etherprof/releases/latest)** page.
-2. Download `Etherprof.exe`.
-3. Run the executable. It is completely self-contained—no installers or runtime dependencies required.
+2. Download `Etherprof-Setup-0.4.2.exe`.
+3. Run the installer. It configures standard Program Files installation, Start Menu shortcuts, and uninstaller.
+   *(Silent installation is supported via `/VERYSILENT /NORESTART`).*
 
 > **Note**: Because Etherprof modifies network adapter IP configurations and binds raw sockets for ICMP/UDP tests, Windows requires Administrator privileges. Click **Yes** on the UAC prompt when launching.
 
 ---
 
-## 🛠️ Building from Source
+## 🛠️ Building & Releasing
 
 ### Prerequisites
 - Windows 10 (1809+) or Windows 11 (x64)
 - [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [Inno Setup 6](https://jrsoftware.org/isdl.php) (`winget install JRSoftware.InnoSetup`)
 
-### 1. Clone the Repository
-```powershell
-git clone https://github.com/mikemaste1/Etherprof.git
-cd Etherprof
-```
-
-### 2. Build the Solution
+### 1. Build and Run Tests
 ```powershell
 dotnet build --nologo
-```
-
-### 3. Run Tests
-The automated test suite contains 130 unit and integration tests across core subnet calculations, stream test client/servers, and test runners:
-```powershell
 dotnet test --nologo
 ```
 
-### 4. Publish Self-Contained Single-File Executable
+### 2. Build Release Installer
+A single script builds the self-contained publication and compiles the Inno Setup installer:
 ```powershell
-dotnet publish src/Etherprof.App/Etherprof.App.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
+.\build-release.ps1
 ```
-The output binary will be located at:
-`src/Etherprof.App/bin/Release/net10.0-windows/win-x64/publish/Etherprof.exe`
+The resulting installer is generated at:
+`artifacts/Etherprof-Setup-0.4.2.exe`
+
+For detailed release workflows and WinGet submission instructions, see **[docs/RELEASING.md](docs/RELEASING.md)**.
 
 ---
 

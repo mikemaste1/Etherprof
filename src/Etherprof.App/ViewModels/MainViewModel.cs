@@ -146,7 +146,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     }
 
     // Version & Compile Date
-    public string AppVersion { get; } = "v0.4.2";
+    public string AppVersion { get; }
     public string BuildDate { get; }
     public string BuildInfo { get; }
 
@@ -326,7 +326,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
             buildDate = DateTime.Now;
         }
         BuildDate = buildDate.ToString("yyyy-MM-dd HH:mm");
-        BuildInfo = $"v0.4.2 · Built {BuildDate}";
+        var ver = typeof(App).Assembly.GetName().Version;
+        string verStr = (ver != null && ver.Major >= 0) ? $"v{ver.Major}.{ver.Minor}.{ver.Build}" : "v0.4.2";
+        AppVersion = verStr;
+        BuildInfo = $"{verStr} · Built {BuildDate}";
 
         // Filtered activity log with category topic filtering
         FilteredActivityLog = CollectionViewSource.GetDefaultView(ActivityLog);
