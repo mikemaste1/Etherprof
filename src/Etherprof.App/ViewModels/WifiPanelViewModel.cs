@@ -124,8 +124,86 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
 
     public ObservableCollection<WifiEventViewModel> WifiEvents { get; } = new();
 
+    public Action<string, string>? LogAction { get; set; }
+
     public ICommand EditAliasCommand { get; }
     public ICommand OpenLocationSettingsCommand { get; }
+    public ICommand CopySsidCommand { get; }
+    public ICommand CopyBssidCommand { get; }
+    public ICommand ExtractOrToggleKeyCommand { get; }
+    public ICommand CopyKeyCommand { get; }
+
+    private string? _wifiKey;
+    public string? WifiKey
+    {
+        get => _wifiKey;
+        private set
+        {
+            _wifiKey = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasKey));
+            OnPropertyChanged(nameof(DisplayKeyText));
+        }
+    }
+
+    private bool _isKeyRevealed;
+    public bool IsKeyRevealed
+    {
+        get => _isKeyRevealed;
+        set
+        {
+            _isKeyRevealed = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DisplayKeyText));
+            OnPropertyChanged(nameof(KeyVisibilityIcon));
+        }
+    }
+
+    private bool _isExtractingKey;
+    public bool IsExtractingKey
+    {
+        get => _isExtractingKey;
+        private set
+        {
+            _isExtractingKey = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DisplayKeyText));
+        }
+    }
+
+    private string? _keyStatusMessage;
+    public string? KeyStatusMessage
+    {
+        get => _keyStatusMessage;
+        set
+        {
+            _keyStatusMessage = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasKeyStatusMessage));
+        }
+    }
+
+    public bool HasKeyStatusMessage => !string.IsNullOrEmpty(KeyStatusMessage);
+
+    public bool HasKey => !string.IsNullOrEmpty(WifiKey);
+
+    public string KeyVisibilityIcon => IsKeyRevealed ? "🙈 Hide" : "👁 Reveal";
+
+    public string DisplayKeyText
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(WifiKey))
+            {
+                return IsExtractingKey ? "Reading key..." : "(Click '👁 Reveal' to show key)";
+            }
+            if (WifiKey.StartsWith("("))
+            {
+                return WifiKey;
+            }
+            return IsKeyRevealed ? WifiKey : "••••••••••••";
+        }
+    }
 
     public WifiPanelViewModel(
         IWifiMonitor wifiMonitor,
@@ -140,9 +218,147 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
         EditAliasCommand = new RelayCommand(_ => TriggerEditAlias());
         OpenLocationSettingsCommand = new RelayCommand(_ => OpenWindowsLocationSettings());
 
+        CopySsidCommand = new RelayCommand(_ =>
+        {
+            if (!string.IsNullOrEmpty(Ssid))
+            {
+                try
+                {
+                    System.Windows.Clipboard.SetText(Ssid);
+                    LogAction?.Invoke("WIFI", $"Copied SSID to clipboard: {Ssid}");
+                }
+                catch { }
+            }
+        });
+
+        CopyBssidCommand = new RelayCommand(_ =>
+        {
+            if (!string.IsNullOrEmpty(Bssid))
+            {
+                try
+                {
+                    System.Windows.Clipboard.SetText(Bssid);
+                    LogAction?.Invoke("WIFI", $"Copied BSSID (MAC) to clipboard: {Bssid}");
+                }
+                catch { }
+            }
+        });
+
+        ExtractOrToggleKeyCommand = new RelayCommand(_ =>
+        {
+            if (string.IsNullOrEmpty(WifiKey))
+            {
+                _ = ExtractWifiKeyAsync();
+            }
+            else
+            {
+                IsKeyRevealed = !IsKeyRevealed;
+            }
+        });
+
+        CopyKeyCommand = new RelayCommand(_ =>
+        {
+            if (!string.IsNullOrEmpty(WifiKey) && !WifiKey.StartsWith("("))
+            {
+                try
+                {
+                    System.Windows.Clipboard.SetText(WifiKey);
+                    KeyStatusMessage = "Copied!";
+                    LogAction?.Invoke("WIFI", $"Copied Wi-Fi key for '{Ssid}' to clipboard.");
+                }
+                catch { }
+            }
+            else if (string.IsNullOrEmpty(WifiKey))
+            {
+                Task.Run(async () =>
+                {
+                    await ExtractWifiKeyAsync();
+                    if (!string.IsNullOrEmpty(WifiKey) && !WifiKey.StartsWith("("))
+                    {
+                        await _dispatcher.BeginInvoke(() =>
+                        {
+                            try
+                            {
+                                System.Windows.Clipboard.SetText(WifiKey);
+                                KeyStatusMessage = "Copied!";
+                            }
+                            catch { }
+                        });
+                    }
+                });
+            }
+        });
+
         _wifiMonitor.StateChanged += OnWifiStateChanged;
         _wifiMonitor.Roamed += OnWifiRoamed;
         _wifiMonitor.ConnectionEvent += OnWifiConnectionEvent;
+    }
+
+    public async Task ExtractWifiKeyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Ssid))
+        {
+            KeyStatusMessage = "Not connected to Wi-Fi.";
+            return;
+        }
+
+        try
+        {
+            IsExtractingKey = true;
+            KeyStatusMessage = "Reading key...";
+            OnPropertyChanged(nameof(DisplayKeyText));
+
+            string? currentSsid = Ssid;
+            string? key = await Task.Run(() =>
+            {
+                try
+                {
+                    var psi = new System.Diagnostics.ProcessStartInfo("netsh", $"wlan show profile name=\"{currentSsid}\" key=clear")
+                    {
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+
+                    using var proc = System.Diagnostics.Process.Start(psi);
+                    if (proc == null) return null;
+
+                    string output = proc.StandardOutput.ReadToEnd();
+                    proc.WaitForExit(3000);
+
+                    return WifiKeyParser.ExtractKeyFromNetshOutput(output);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed running netsh to extract key");
+                }
+                return null;
+            });
+
+            if (!string.IsNullOrEmpty(key))
+            {
+                WifiKey = key;
+                IsKeyRevealed = true;
+                KeyStatusMessage = key.StartsWith("(") ? null : "Key revealed";
+                LogAction?.Invoke("WIFI", $"Extracted Wi-Fi key for network '{currentSsid}'.");
+            }
+            else
+            {
+                WifiKey = null;
+                KeyStatusMessage = "Key not found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to extract Wi-Fi key for SSID '{Ssid}'", Ssid);
+            KeyStatusMessage = "Error reading key";
+        }
+        finally
+        {
+            IsExtractingKey = false;
+            OnPropertyChanged(nameof(DisplayKeyText));
+        }
     }
 
     public async Task InitializeAsync()

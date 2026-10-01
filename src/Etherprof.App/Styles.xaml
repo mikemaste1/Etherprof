@@ -65,4 +65,16 @@
         <Setter Property="FontSize" Value="12" />
         <Setter Property="Margin" Value="8,1,0,1" />
     </Style>
+
+    <!-- Selectable read-only text style (looks like TextBlock, selectable & copyable) -->
+    <Style x:Key="SelectableLabel" TargetType="TextBox">
+        <Setter Property="IsReadOnly" Value="True" />
+        <Setter Property="IsUndoEnabled" Value="False" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="IBeam" />
+    </Style>
 </ResourceDictionary>

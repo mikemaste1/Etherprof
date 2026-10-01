@@ -53,23 +53,30 @@ public sealed class StreamTestServer : IStreamTestServer
         {
             if (port == 0)
             {
-                for (int attempt = 0; attempt < 10; attempt++)
+                var rand = new Random();
+                for (int attempt = 0; attempt < 50; attempt++)
                 {
+                    int candidatePort = rand.Next(20000, 45000);
                     try
                     {
-                        _tcpListener = new TcpListener(IPAddress.Any, 0);
-                        _tcpListener.Start();
-                        _boundPort = ((IPEndPoint)_tcpListener.LocalEndpoint).Port;
+                        var tcp = new TcpListener(IPAddress.Any, candidatePort);
+                        tcp.Start();
 
-                        _udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-                        _udpSocket.Bind(new IPEndPoint(IPAddress.Any, _boundPort));
+                        var udp = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                        udp.Bind(new IPEndPoint(IPAddress.Any, candidatePort));
+
+                        _tcpListener = tcp;
+                        _udpSocket = udp;
+                        _boundPort = candidatePort;
                         break;
                     }
                     catch (SocketException)
                     {
                         try { _tcpListener?.Stop(); } catch { }
                         try { _udpSocket?.Dispose(); } catch { }
-                        if (attempt == 9) throw;
+                        _tcpListener = null;
+                        _udpSocket = null;
+                        if (attempt == 49) throw;
                     }
                 }
             }
@@ -86,8 +93,10 @@ public sealed class StreamTestServer : IStreamTestServer
 
             _logger?.LogInformation("StreamTestServer started on 0.0.0.0:{Port} (TCP & UDP)", _boundPort);
 
-            _ = Task.Run(() => AcceptTcpClientsAsync(_tcpListener, _cts.Token));
-            _ = Task.Run(() => ListenUdpAsync(_udpSocket, _cts.Token));
+            if (_tcpListener != null)
+                _ = Task.Run(() => AcceptTcpClientsAsync(_tcpListener, _cts.Token));
+            if (_udpSocket != null)
+                _ = Task.Run(() => ListenUdpAsync(_udpSocket, _cts.Token));
             _ = Task.Run(() => MonitorSessionExpiryAsync(_cts.Token));
         }
         catch (Exception ex)

@@ -224,6 +224,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _dispatcher = Dispatcher.CurrentDispatcher;
 
         WifiPanel.OpenAliasEditor = (bssid, alias) => OpenAliasEditorDialog?.Invoke(bssid, alias);
+        WifiPanel.LogAction = (cat, msg) => AddActivityLog(cat, msg);
 
         // Wire commands
         ApplyProfileCommand = new RelayCommand(o => _ = ApplyProfileAsync(o as ProfileButtonViewModel));
@@ -1800,6 +1801,48 @@ if ($wifi) {
 
     public string GetDefaultAdHocIp()
     {
+        // 1. Authoritative default gateway from current adapter state
+        if (!string.IsNullOrWhiteSpace(_adapterState?.Gateway) && _adapterState.Gateway != "0.0.0.0")
+        {
+            return _adapterState.Gateway;
+        }
+
+        // 2. Query the selected adapter directly from .NET NetworkInterface
+        string? targetAdapterId = _adapterState?.AdapterId ?? _settings.SelectedAdapterId;
+        try
+        {
+            var interfaces = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+            if (!string.IsNullOrEmpty(targetAdapterId))
+            {
+                var currentNic = interfaces.FirstOrDefault(n => n.Id == targetAdapterId);
+                if (currentNic != null)
+                {
+                    var gw = currentNic.GetIPProperties().GatewayAddresses
+                        .FirstOrDefault(g => g.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork
+                                             && g.Address.ToString() != "0.0.0.0");
+                    if (gw?.Address != null)
+                    {
+                        return gw.Address.ToString();
+                    }
+                }
+            }
+
+            // 3. Fallback: check any active non-loopback interface that has a default gateway
+            var anyNicWithGateway = interfaces
+                .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up
+                            && n.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
+                .SelectMany(n => n.GetIPProperties().GatewayAddresses)
+                .FirstOrDefault(g => g.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork
+                                     && g.Address.ToString() != "0.0.0.0");
+
+            if (anyNicWithGateway?.Address != null)
+            {
+                return anyNicWithGateway.Address.ToString();
+            }
+        }
+        catch { }
+
+        // 4. Fallback: only if no pure gateway is found, propose .1 in current subnet
         string? ip = _adapterState?.IPv4Address;
         if (string.IsNullOrEmpty(ip))
         {

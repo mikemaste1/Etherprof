@@ -13,10 +13,9 @@ public partial class AdHocPingDialog : Window
         InitializeComponent();
         ipBox.Text = prefilledIp;
 
-        int lastDot = prefilledIp.LastIndexOf('.');
-        if (lastDot > 0)
+        if (!string.IsNullOrEmpty(prefilledIp))
         {
-            subnetHintText.Text = $"Prefilled from subnet: {prefilledIp.Substring(0, lastDot + 1)}x";
+            subnetHintText.Text = $"Default gateway / proposed target: {prefilledIp}";
         }
     }
 

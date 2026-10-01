@@ -8,7 +8,7 @@
         Loaded="OnLoaded">
     <StackPanel Margin="16">
         <TextBlock Text="Target Host / IP Address" FontWeight="SemiBold" Margin="0,0,0,2" />
-        <TextBlock x:Name="subnetHintText" Text="Prefilled from current interface subnet:" FontSize="10" Foreground="#64748B" Margin="0,0,0,6" />
+        <TextBlock x:Name="subnetHintText" Text="Default gateway / target host:" FontSize="10" Foreground="#64748B" Margin="0,0,0,6" />
 
         <Grid Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
