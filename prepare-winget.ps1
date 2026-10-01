@@ -85,7 +85,6 @@ ElevationRequirement: elevationRequired
 AppsAndFeaturesEntries:
   - DisplayName: Etherprof
     Publisher: mikemaste1
-    DisplayVersion: $Version
     ProductCode: '{E74E8F01-B2C1-4D5F-8A9D-56D25494C201}_is1'
 Installers:
   - Architecture: x64
