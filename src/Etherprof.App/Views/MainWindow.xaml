@@ -82,6 +82,19 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="WifiProfilesToggleButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource SectionToggleButtonStyle}">
+            <Setter Property="Background" Value="#F5F3FF" />
+            <Setter Property="Foreground" Value="#6D28D9" />
+            <Setter Property="BorderBrush" Value="#DDD6FE" />
+            <Style.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Background" Value="#7C3AED" />
+                    <Setter Property="Foreground" Value="White" />
+                    <Setter Property="BorderBrush" Value="#6D28D9" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="SpeedToggleButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource SectionToggleButtonStyle}">
             <Setter Property="Background" Value="#FEF3C7" />
             <Setter Property="Foreground" Value="#B45309" />
@@ -287,18 +300,84 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="0,0,6,0">
 
-                <!-- Laconic Section Visibility Toggle Toolbar -->
+                <!-- Consolidated Section Visibility & Starred Quick Toolbar -->
                 <Border Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="4" Padding="6,3" Margin="0,0,0,8">
                     <DockPanel>
-                        <TextBlock Text="SECTIONS:" FontSize="9" FontWeight="Bold" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <!-- Left: Consolidated Sections Manager Button with Popup -->
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                            <ToggleButton x:Name="sectionsMenuButton" Style="{StaticResource ActionButton}"
+                                          Padding="6,2" FontSize="10" FontWeight="SemiBold" Height="24" Margin="0,0,8,0"
+                                          ToolTip="Configure visible and starred sections">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="≡ Sections ▾" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </ToggleButton>
+
+                            <!-- Popup for Section Selection & Star configuration -->
+                            <Popup IsOpen="{Binding IsChecked, ElementName=sectionsMenuButton, Mode=TwoWay}"
+                                   StaysOpen="False" PlacementTarget="{Binding ElementName=sectionsMenuButton}"
+                                   Placement="Bottom" AllowsTransparency="True" PopupAnimation="Fade">
+                                <Border Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6"
+                                        Padding="10,8" Margin="0,4,0,0" Width="260">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="8" ShadowDepth="2" Direction="270" Color="#000000" Opacity="0.15" />
+                                    </Border.Effect>
+                                    <StackPanel>
+                                        <DockPanel Margin="0,0,0,6">
+                                            <TextBlock Text="MANAGE SECTIONS" FontSize="10" FontWeight="Bold" Foreground="#475569" VerticalAlignment="Center" />
+                                            <TextBlock Text="★ = Star to toolbar" FontSize="9" Foreground="#94A3B8" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        </DockPanel>
+                                        <Separator Background="#E2E8F0" Margin="0,0,0,6" />
+
+                                        <ItemsControl ItemsSource="{Binding SectionItems}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:SectionItemViewModel}">
+                                                    <DockPanel Margin="0,3">
+                                                        <!-- Star Button -->
+                                                        <Button DockPanel.Dock="Right" Command="{Binding ToggleStarCommand}"
+                                                                Content="{Binding StarIcon}" Foreground="{Binding StarBrush}"
+                                                                FontSize="14" FontWeight="Bold" Width="24" Height="22"
+                                                                Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                                                ToolTip="Star to pin to top section bar" />
+                                                        <!-- Section Visibility Checkbox -->
+                                                        <CheckBox IsChecked="{Binding IsVisible, Mode=TwoWay}" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Name}" FontSize="11" Foreground="#1E293B" VerticalAlignment="Center" Margin="4,0,0,0" />
+                                                        </CheckBox>
+                                                    </DockPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+                        </StackPanel>
+
+                        <!-- Right / Center: Quick Toolbar with ONLY Starred Sections -->
                         <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <ToggleButton Content="⚡ IP" IsChecked="{Binding QuickIpVisible, Mode=TwoWay}" Style="{StaticResource IpToggleButtonStyle}" ToolTip="Show/Hide Quick IP &amp; Profiles" />
-                            <ToggleButton Content="📶 Wi-Fi" IsChecked="{Binding WifiVisible, Mode=TwoWay}" Style="{StaticResource WifiToggleButtonStyle}" ToolTip="Show/Hide Wi-Fi Monitor" />
-                            <ToggleButton Content="🚀 Speed" IsChecked="{Binding SpeedTestVisible, Mode=TwoWay}" Style="{StaticResource SpeedToggleButtonStyle}" ToolTip="Show/Hide Speed Test" />
-                            <ToggleButton Content="🌊 Client" IsChecked="{Binding StreamClientVisible, Mode=TwoWay}" Style="{StaticResource StreamClientToggleButtonStyle}" ToolTip="Show/Hide Stream Test Client" />
-                            <ToggleButton Content="🖥️ Server" IsChecked="{Binding StreamServerVisible, Mode=TwoWay}" Style="{StaticResource StreamServerToggleButtonStyle}" ToolTip="Show/Hide Stream Test Server" />
-                            <ToggleButton Content="📋 Log" IsChecked="{Binding ActivityLogVisible, Mode=TwoWay}" Style="{StaticResource LogToggleButtonStyle}" ToolTip="Show/Hide Activity &amp; Event Log" />
-                            <ToggleButton Content="📊 Ping" IsChecked="{Binding TestResultsSectionVisible, Mode=TwoWay}" Style="{StaticResource PingToggleButtonStyle}" ToolTip="Show/Hide Test Set Results (Ping)" />
+                            <ToggleButton Content="⚡ IP" IsChecked="{Binding QuickIpVisible, Mode=TwoWay}"
+                                          Visibility="{Binding QuickIpStarred, Converter={StaticResource BoolToVis}}"
+                                          Style="{StaticResource IpToggleButtonStyle}" ToolTip="Show/Hide Quick IP &amp; Profiles" />
+                            <ToggleButton Content="📶 Wi-Fi" IsChecked="{Binding WifiVisible, Mode=TwoWay}"
+                                          Visibility="{Binding WifiStarred, Converter={StaticResource BoolToVis}}"
+                                          Style="{StaticResource WifiToggleButtonStyle}" ToolTip="Show/Hide Wi-Fi Monitor" />
+                            <ToggleButton Content="🔑 Profiles" IsChecked="{Binding WifiProfilesVisible, Mode=TwoWay}"
+                                          Visibility="{Binding WifiProfilesStarred, Converter={StaticResource BoolToVis}}"
+                                          Style="{StaticResource WifiProfilesToggleButtonStyle}" ToolTip="Show/Hide Saved Wi-Fi Profiles" />
+                            <ToggleButton Content="🚀 Speed" IsChecked="{Binding SpeedTestVisible, Mode=TwoWay}"
+                                          Visibility="{Binding SpeedTestStarred, Converter={StaticResource BoolToVis}}"
+                                          Style="{StaticResource SpeedToggleButtonStyle}" ToolTip="Show/Hide Speed Test" />
+                            <ToggleButton Content="🌊 Client" IsChecked="{Binding StreamClientVisible, Mode=TwoWay}"
+                                          Visibility="{Binding StreamClientStarred, Converter={StaticResource BoolToVis}}"
+                                          Style="{StaticResource StreamClientToggleButtonStyle}" ToolTip="Show/Hide Stream Test Client" />
+                            <ToggleButton Content="🖥️ Server" IsChecked="{Binding StreamServerVisible, Mode=TwoWay}"
+                                          Visibility="{Binding StreamServerStarred, Converter={StaticResource BoolToVis}}"
+                                          Style="{StaticResource StreamServerToggleButtonStyle}" ToolTip="Show/Hide Stream Test Server" />
+                            <ToggleButton Content="📋 Log" IsChecked="{Binding ActivityLogVisible, Mode=TwoWay}"
+                                          Visibility="{Binding ActivityLogStarred, Converter={StaticResource BoolToVis}}"
+                                          Style="{StaticResource LogToggleButtonStyle}" ToolTip="Show/Hide Activity &amp; Event Log" />
+                            <ToggleButton Content="📊 Ping" IsChecked="{Binding TestResultsSectionVisible, Mode=TwoWay}"
+                                          Visibility="{Binding TestResultsStarred, Converter={StaticResource BoolToVis}}"
+                                          Style="{StaticResource PingToggleButtonStyle}" ToolTip="Show/Hide Test Set Results (Ping)" />
                         </WrapPanel>
                     </DockPanel>
                 </Border>
@@ -409,7 +488,10 @@
                 </Expander>
 
                 <!-- 2. WI-FI MONITOR EXPANDER -->
-                <Expander x:Name="wifiExpander" Header="📶 WI-FI MONITOR" IsExpanded="{Binding WifiExpanded, Mode=TwoWay}" Style="{StaticResource CardExpander}"
+                <Expander x:Name="wifiExpander" Header="📶 WI-FI MONITOR"
+                          IsExpanded="{Binding WifiExpanded, Mode=TwoWay}"
+                          Visibility="{Binding WifiVisible, Converter={StaticResource BoolToVis}}"
+                          Style="{StaticResource CardExpander}"
                           Background="#FAF5FF" BorderBrush="#E9D5FF" Foreground="#7E22CE">
                     <StackPanel Margin="0,4,0,0" DataContext="{Binding WifiPanel}">
                         <!-- Non-Wi-Fi adapter notice -->
@@ -430,9 +512,9 @@
                                         Command="{Binding OpenLocationSettingsCommand}" HorizontalAlignment="Left" Margin="0,4,0,0" />
                             </StackPanel>
 
-                            <!-- Connected / Selected Wi-Fi Card -->
+                            <!-- Connected Active Wi-Fi Card -->
                             <Border Padding="8,6" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3" Margin="0,2,0,6"
-                                    Visibility="{Binding HasActiveOrSelectedNetwork, Converter={StaticResource BoolToVis}}">
+                                    Visibility="{Binding IsConnected, Converter={StaticResource BoolToVis}}">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -440,34 +522,21 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <!-- History Network Banner -->
-                                    <Border Grid.Row="0" Background="#FEF3C7" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="3" Padding="6,3" Margin="0,0,0,6"
-                                            Visibility="{Binding IsViewingHistoryNetwork, Converter={StaticResource BoolToVis}}">
-                                        <DockPanel>
-                                            <Button DockPanel.Dock="Right" Content="↺ Return to active connection"
-                                                    Command="{Binding ResetToActiveSsidCommand}" Style="{StaticResource ActionButton}"
-                                                    Padding="6,1" FontSize="10" Height="20" />
-                                            <TextBlock Text="Viewing saved profile" FontSize="10" FontWeight="SemiBold" Foreground="#92400E" VerticalAlignment="Center" />
-                                        </DockPanel>
-                                    </Border>
-
                                     <!-- SSID (Selectable + Copy button) -->
-                                    <DockPanel Grid.Row="1" Margin="0,0,0,4">
+                                    <DockPanel Grid.Row="0" Margin="0,0,0,4">
                                         <Button DockPanel.Dock="Right" Content="📋" ToolTip="Copy SSID to clipboard"
                                                 Padding="4,1" FontSize="11" Height="22" Width="26"
                                                 Command="{Binding CopySsidCommand}"
                                                 Style="{StaticResource ActionButton}" Margin="4,0,0,0" />
                                         <TextBox Style="{StaticResource SelectableLabel}"
-                                                 Text="{Binding DisplaySsid, Mode=OneWay}"
+                                                 Text="{Binding Ssid, Mode=OneWay}"
                                                  FontWeight="SemiBold" FontSize="14" Foreground="#111827" />
                                     </DockPanel>
 
                                     <!-- AP Alias & BSSID / MAC (Selectable + Copy button + Label button) -->
-                                    <DockPanel Grid.Row="2" Margin="0,0,0,4"
-                                               Visibility="{Binding CanShowLiveBssidAndSignal, Converter={StaticResource BoolToVis}}">
+                                    <DockPanel Grid.Row="1" Margin="0,0,0,4">
                                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                             <Button Content="📋" ToolTip="Copy MAC (BSSID) to clipboard"
                                                     Padding="4,1" FontSize="11" Height="22" Width="26"
@@ -486,7 +555,7 @@
                                     </DockPanel>
 
                                     <!-- Wi-Fi Security Key Extraction -->
-                                    <Border Grid.Row="3" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="3" Padding="6,4" Margin="0,2,0,4">
+                                    <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="3" Padding="6,4" Margin="0,2,0,4">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
@@ -518,7 +587,7 @@
                                     </Border>
 
                                     <!-- Wi-Fi Connection QR Code for Mobile Devices -->
-                                    <Border Grid.Row="4" Visibility="{Binding IsQrCodeVisible, Converter={StaticResource BoolToVis}}"
+                                    <Border Grid.Row="3" Visibility="{Binding IsQrCodeVisible, Converter={StaticResource BoolToVis}}"
                                             Background="#FFFFFF" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6"
                                             Padding="8" Margin="0,4,0,4" HorizontalAlignment="Center">
                                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -526,14 +595,13 @@
                                                    RenderOptions.BitmapScalingMode="NearestNeighbor" HorizontalAlignment="Center" />
                                             <TextBlock Text="Scan to connect mobile device" FontSize="10" FontWeight="SemiBold"
                                                        Foreground="#334155" HorizontalAlignment="Center" Margin="0,4,0,1" />
-                                            <TextBlock Text="{Binding DisplaySsid, StringFormat='Network: {0}'}" FontSize="9"
+                                            <TextBlock Text="{Binding Ssid, StringFormat='Network: {0}'}" FontSize="9"
                                                        Foreground="#64748B" HorizontalAlignment="Center" />
                                         </StackPanel>
                                     </Border>
 
                                     <!-- Signal metrics & Band/Channel -->
-                                    <Grid Grid.Row="5" Margin="0,2,0,0"
-                                          Visibility="{Binding CanShowLiveBssidAndSignal, Converter={StaticResource BoolToVis}}">
+                                    <Grid Grid.Row="4" Margin="0,2,0,0">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
@@ -543,42 +611,6 @@
                                     </Grid>
                                 </Grid>
                             </Border>
-
-                            <!-- Saved Networks (SSID History) -->
-                            <DockPanel Margin="0,6,0,2" Visibility="{Binding HasWifiHistory, Converter={StaticResource BoolToVis}}">
-                                <TextBlock DockPanel.Dock="Left" Text="SAVED NETWORKS (SSID HISTORY)" FontSize="10" FontWeight="Bold" Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" />
-                                <TextBlock DockPanel.Dock="Right" Text="{Binding WifiHistory.Count, StringFormat='{}{0} saved'}" FontSize="10" Foreground="{StaticResource MutedTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                            </DockPanel>
-
-                            <ScrollViewer MaxHeight="120" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                          Visibility="{Binding HasWifiHistory, Converter={StaticResource BoolToVis}}" Margin="0,0,0,6">
-                                <ItemsControl ItemsSource="{Binding WifiHistory}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type vm:WifiHistoryItemViewModel}">
-                                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="3" Padding="6,3" Margin="0,1,0,2">
-                                                <DockPanel>
-                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding LastConnectedText}" FontSize="10" FontFamily="{StaticResource MonoFont}"
-                                                                   Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                                        <Border CornerRadius="3" Padding="4,1" Margin="0,0,4,0" VerticalAlignment="Center"
-                                                                Background="{Binding BadgeBackgroundBrush}">
-                                                            <TextBlock Text="{Binding StatusBadgeText}" FontSize="9" FontWeight="Bold" Foreground="White" />
-                                                        </Border>
-                                                        <Button Content="👁 View Key" ToolTip="Extract Wi-Fi key &amp; show mobile QR code" Command="{Binding SelectSsidCommand}"
-                                                                Style="{StaticResource ActionButton}" Padding="6,1" FontSize="10" Height="22" Margin="0,0,3,0" />
-                                                        <Button Content="📋" ToolTip="Copy SSID" Command="{Binding CopySsidCommand}"
-                                                                Style="{StaticResource ActionButton}" Padding="4,1" FontSize="10" Height="22" Width="26" />
-                                                    </StackPanel>
-
-                                                    <TextBox Style="{StaticResource SelectableLabel}"
-                                                             Text="{Binding Ssid, Mode=OneWay}"
-                                                             FontWeight="SemiBold" FontSize="11" Foreground="#1E293B" VerticalAlignment="Center" />
-                                                </DockPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
 
                             <!-- WLAN Event log -->
                             <TextBlock Text="WLAN ROAMING EVENTS" FontSize="10" FontWeight="Bold" Foreground="{StaticResource MutedTextBrush}" Margin="0,4,0,2"
@@ -604,6 +636,128 @@
                                 </ItemsControl>
                             </ScrollViewer>
                         </StackPanel>
+                    </StackPanel>
+                </Expander>
+
+                <!-- 2b. SAVED WI-FI PROFILES EXPANDER -->
+                <Expander x:Name="wifiProfilesExpander" Header="🔑 SAVED WI-FI PROFILES"
+                          IsExpanded="{Binding WifiProfilesExpanded, Mode=TwoWay}"
+                          Visibility="{Binding WifiProfilesVisible, Converter={StaticResource BoolToVis}}"
+                          Style="{StaticResource CardExpander}"
+                          Background="#FAF5FF" BorderBrush="#E9D5FF" Foreground="#7E22CE">
+                    <StackPanel Margin="0,4,0,0" DataContext="{Binding WifiProfilesPanel}">
+                        <!-- Live Search Bar & Count Summary -->
+                        <DockPanel Margin="0,0,0,6">
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding CountSummaryText}" FontSize="10"
+                                       Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="11" Padding="6,3" VerticalContentAlignment="Center" />
+                                <TextBlock Text="🔍 Search saved Wi-Fi profiles..." FontSize="11" Foreground="#94A3B8"
+                                           IsHitTestVisible="False" VerticalAlignment="Center" Margin="8,0,0,0"
+                                           Visibility="{Binding HasSearchText, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}" />
+                                <Button Grid.Column="1" Content="✕" Command="{Binding ClearSearchCommand}"
+                                        Visibility="{Binding HasSearchText, Converter={StaticResource BoolToVis}}"
+                                        Style="{StaticResource ActionButton}" Padding="4,1" FontSize="10" Width="22" Height="22" Margin="2,0,0,0"
+                                        ToolTip="Clear search filter" />
+                            </Grid>
+                        </DockPanel>
+
+                        <!-- Selected Profile Details Card (Key & QR Code) -->
+                        <Border Visibility="{Binding HasSelectedProfile, Converter={StaticResource BoolToVis}}"
+                                Background="#FFFFFF" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,0,0,6">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,4">
+                                    <Button DockPanel.Dock="Right" Content="✕ Close" Command="{Binding CloseSelectedProfileCommand}"
+                                            Style="{StaticResource ActionButton}" Padding="6,1" FontSize="10" Height="20" />
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="PROFILE:" FontSize="10" FontWeight="Bold" Foreground="#475569" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                        <TextBox Style="{StaticResource SelectableLabel}"
+                                                 Text="{Binding SelectedSsid, Mode=OneWay}"
+                                                 FontWeight="Bold" FontSize="13" Foreground="#111827" VerticalAlignment="Center" />
+                                        <Button Content="📋" ToolTip="Copy SSID to clipboard" Command="{Binding CopySsidCommand}"
+                                                Style="{StaticResource ActionButton}" Padding="4,1" FontSize="10" Height="20" Width="24" Margin="4,0,0,0" />
+                                    </StackPanel>
+                                </DockPanel>
+
+                                <!-- Key Row -->
+                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="3" Padding="6,4" Margin="0,2,0,4">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="🔑 Key:" FontSize="11" FontWeight="SemiBold" Foreground="#475569" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                        <TextBox Grid.Column="1" Style="{StaticResource SelectableLabel}"
+                                                 Text="{Binding DisplayKeyText, Mode=OneWay}"
+                                                 FontFamily="Consolas" FontSize="11" Foreground="#334155" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding KeyStatusMessage}" FontSize="10" Foreground="#059669" FontWeight="Medium"
+                                                       VerticalAlignment="Center" Margin="0,0,6,0"
+                                                       Visibility="{Binding HasKeyStatusMessage, Converter={StaticResource BoolToVis}}" />
+                                            <Button Content="📱 QR" ToolTip="Show / hide Wi-Fi connection QR code for mobile devices"
+                                                    Style="{StaticResource ActionButton}" Padding="6,1" FontSize="10" Height="22"
+                                                    Command="{Binding ToggleQrCodeCommand}" Margin="0,0,4,0" />
+                                            <Button Content="{Binding KeyVisibilityIcon}" ToolTip="Reveal or hide Wi-Fi security key"
+                                                    Style="{StaticResource ActionButton}" Padding="6,1" FontSize="10" Height="22"
+                                                    Command="{Binding ExtractOrToggleKeyCommand}" Margin="0,0,4,0" />
+                                            <Button Content="📋 Copy" ToolTip="Copy Wi-Fi security key to clipboard"
+                                                    Style="{StaticResource ActionButton}" Padding="6,1" FontSize="10" Height="22"
+                                                    Command="{Binding CopyKeyCommand}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Mobile Connection QR Code -->
+                                <Border Visibility="{Binding IsQrCodeVisible, Converter={StaticResource BoolToVis}}"
+                                        Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6"
+                                        Padding="8" Margin="0,4,0,2" HorizontalAlignment="Center">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Image Source="{Binding WifiQrCodeImage}" Width="150" Height="150"
+                                               RenderOptions.BitmapScalingMode="NearestNeighbor" HorizontalAlignment="Center" />
+                                        <TextBlock Text="Scan to connect mobile device" FontSize="10" FontWeight="SemiBold"
+                                                   Foreground="#334155" HorizontalAlignment="Center" Margin="0,4,0,1" />
+                                        <TextBlock Text="{Binding SelectedSsid, StringFormat='Network: {0}'}" FontSize="9"
+                                                   Foreground="#64748B" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Filtered Profiles List -->
+                        <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding FilteredProfiles}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:WifiHistoryItemViewModel}">
+                                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="3" Padding="6,3" Margin="0,1,0,2">
+                                            <DockPanel>
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding LastConnectedText}" FontSize="10" FontFamily="{StaticResource MonoFont}"
+                                                               Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                                    <Border CornerRadius="3" Padding="4,1" Margin="0,0,4,0" VerticalAlignment="Center"
+                                                            Background="{Binding BadgeBackgroundBrush}">
+                                                        <TextBlock Text="{Binding StatusBadgeText}" FontSize="9" FontWeight="Bold" Foreground="White" />
+                                                    </Border>
+                                                    <Button Content="👁 View Key" ToolTip="Extract Wi-Fi key &amp; show mobile QR code" Command="{Binding SelectSsidCommand}"
+                                                            Style="{StaticResource ActionButton}" Padding="6,1" FontSize="10" Height="22" Margin="0,0,3,0" />
+                                                    <Button Content="📋" ToolTip="Copy SSID" Command="{Binding CopySsidCommand}"
+                                                            Style="{StaticResource ActionButton}" Padding="4,1" FontSize="10" Height="22" Width="26" />
+                                                </StackPanel>
+
+                                                <TextBox Style="{StaticResource SelectableLabel}"
+                                                         Text="{Binding Ssid, Mode=OneWay}"
+                                                         FontWeight="SemiBold" FontSize="11" Foreground="#1E293B" VerticalAlignment="Center" />
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
                     </StackPanel>
                 </Expander>
 
@@ -940,7 +1094,22 @@
                                             <Border DockPanel.Dock="Left" Background="{Binding CategoryBrush}" CornerRadius="2" Padding="4,1" Margin="0,0,6,0" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Category}" FontSize="9" FontWeight="Bold" Foreground="White" />
                                             </Border>
-                                            <TextBlock Text="{Binding Message}" FontSize="11" Foreground="#1E293B" TextWrapping="Wrap" VerticalAlignment="Center" />
+
+                                            <!-- Actions when SSID is detected in log -->
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
+                                                        Visibility="{Binding HasDetectedSsid, Converter={StaticResource BoolToVis}}">
+                                                <Button Content="🔑 Key" ToolTip="Find in Saved Profiles and reveal key + mobile QR code"
+                                                        Command="{Binding FindInProfilesCommand}"
+                                                        Style="{StaticResource ActionButton}" Padding="4,1" FontSize="9" Height="20" Margin="4,0,2,0" />
+                                                <Button Content="📋 SSID" ToolTip="Copy detected SSID to clipboard"
+                                                        Command="{Binding CopySsidCommand}"
+                                                        Style="{StaticResource ActionButton}" Padding="4,1" FontSize="9" Height="20" Margin="0,0,2,0" />
+                                            </StackPanel>
+
+                                            <!-- Selectable log text -->
+                                            <TextBox Style="{StaticResource SelectableLabel}"
+                                                     Text="{Binding Message, Mode=OneWay}"
+                                                     FontSize="11" Foreground="#1E293B" TextWrapping="Wrap" VerticalAlignment="Center" />
                                         </DockPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

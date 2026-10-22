@@ -30,7 +30,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private readonly Dispatcher _dispatcher;
 
     public WifiPanelViewModel WifiPanel { get; }
+    public WifiProfilesPanelViewModel WifiProfilesPanel { get; }
     public SpeedTestPanelViewModel SpeedTestPanel { get; }
+    public ObservableCollection<SectionItemViewModel> SectionItems { get; } = new();
+
+    public SectionItemViewModel? FindSectionItem(string id) =>
+        SectionItems.FirstOrDefault(s => s.Id == id);
     public StreamPanelViewModel StreamPanel { get; }
     public StreamServerPanelViewModel StreamServerPanel { get; }
 
@@ -204,6 +209,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         ISettingsRepository settingsRepo,
         AppSettings settings,
         WifiPanelViewModel wifiPanel,
+        WifiProfilesPanelViewModel wifiProfilesPanel,
         SpeedTestPanelViewModel speedTestPanel,
         StreamPanelViewModel streamPanel,
         StreamServerPanelViewModel streamServerPanel,
@@ -217,6 +223,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _settingsRepo = settingsRepo;
         _settings = settings;
         WifiPanel = wifiPanel;
+        WifiProfilesPanel = wifiProfilesPanel;
         SpeedTestPanel = speedTestPanel;
         StreamPanel = streamPanel;
         StreamServerPanel = streamServerPanel;
@@ -225,6 +232,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         WifiPanel.OpenAliasEditor = (bssid, alias) => OpenAliasEditorDialog?.Invoke(bssid, alias);
         WifiPanel.LogAction = (cat, msg) => AddActivityLog(cat, msg);
+        WifiProfilesPanel.LogAction = (cat, msg) => AddActivityLog(cat, msg);
 
         // Wire commands
         ApplyProfileCommand = new RelayCommand(o => _ = ApplyProfileAsync(o as ProfileButtonViewModel));
@@ -354,6 +362,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         // Initialize expander states from persisted settings
         _quickIpExpanded = _settings.QuickIpExpanded;
         _wifiExpanded = _settings.WifiExpanded;
+        _wifiProfilesExpanded = _settings.WifiProfilesExpanded;
         _speedTestExpanded = _settings.SpeedTestExpanded;
         _streamClientExpanded = _settings.StreamClientExpanded;
         _streamServerExpanded = _settings.StreamServerExpanded;
@@ -368,11 +377,22 @@ public sealed class MainViewModel : INotifyPropertyChanged
         // Initialize section visibility from persisted settings
         _quickIpVisible = _settings.QuickIpVisible;
         _wifiVisible = _settings.WifiVisible;
+        _wifiProfilesVisible = _settings.WifiProfilesVisible;
         _speedTestVisible = _settings.SpeedTestVisible;
         _streamClientVisible = _settings.StreamClientVisible;
         _streamServerVisible = _settings.StreamServerVisible;
         _activityLogVisible = _settings.ActivityLogVisible;
         _testResultsSectionVisible = _settings.TestResultsVisible;
+
+        // Initialize consolidated section items
+        SectionItems.Add(new SectionItemViewModel("QuickIp", "⚡ IP & Profiles", "⚡", "Quick IP configuration and profiles", QuickIpVisible, QuickIpStarred, v => QuickIpVisible = v, s => QuickIpStarred = s));
+        SectionItems.Add(new SectionItemViewModel("Wifi", "📶 Wi-Fi Monitor", "📶", "Real-time Wi-Fi status, AP, and signal", WifiVisible, WifiStarred, v => WifiVisible = v, s => WifiStarred = s));
+        SectionItems.Add(new SectionItemViewModel("WifiProfiles", "🔑 Saved Wi-Fi Profiles", "🔑", "Saved Wi-Fi profiles, search, key & QR", WifiProfilesVisible, WifiProfilesStarred, v => WifiProfilesVisible = v, s => WifiProfilesStarred = s));
+        SectionItems.Add(new SectionItemViewModel("SpeedTest", "🚀 Speed Test", "🚀", "Download and upload throughput test", SpeedTestVisible, SpeedTestStarred, v => SpeedTestVisible = v, s => SpeedTestStarred = s));
+        SectionItems.Add(new SectionItemViewModel("StreamClient", "🌊 Stream Client", "🌊", "UDP/TCP stream jitter and latency test", StreamClientVisible, StreamClientStarred, v => StreamClientVisible = v, s => StreamClientStarred = s));
+        SectionItems.Add(new SectionItemViewModel("StreamServer", "🖥️ Stream Server", "🖥️", "Local UDP/TCP stream benchmark server", StreamServerVisible, StreamServerStarred, v => StreamServerVisible = v, s => StreamServerStarred = s));
+        SectionItems.Add(new SectionItemViewModel("ActivityLog", "📋 Activity & Event Log", "📋", "System, network, and Wi-Fi event log", ActivityLogVisible, ActivityLogStarred, v => ActivityLogVisible = v, s => ActivityLogStarred = s));
+        SectionItems.Add(new SectionItemViewModel("TestResults", "📊 Ping & Tests", "📊", "Continuous ping latency and test sets", TestResultsSectionVisible, TestResultsStarred, v => TestResultsSectionVisible = v, s => TestResultsStarred = s));
 
         // Initialize internet check
         _internetCheckEnabled = _settings.InternetCheckEnabled;
@@ -392,6 +412,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         get => _wifiExpanded;
         set { if (_wifiExpanded != value) { _wifiExpanded = value; OnPropertyChanged(); SaveExpanderStates(); } }
+    }
+
+    private bool _wifiProfilesExpanded;
+    public bool WifiProfilesExpanded
+    {
+        get => _wifiProfilesExpanded;
+        set { if (_wifiProfilesExpanded != value) { _wifiProfilesExpanded = value; OnPropertyChanged(); SaveExpanderStates(); } }
     }
 
     private bool _speedTestExpanded;
@@ -438,6 +465,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _settings.StreamServerExpanded = StreamServerExpanded;
         _settings.ActivityLogExpanded = ActivityLogExpanded;
         _settings.TestResultsExpanded = TestResultsExpanded;
+        _settings.WifiProfilesExpanded = WifiProfilesExpanded;
         _ = _settingsRepo.SaveAsync(_settings);
     }
 
@@ -487,8 +515,72 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 _wifiVisible = value;
                 OnPropertyChanged();
                 UpdateSectionVisibility("Wifi", value);
+                FindSectionItem("Wifi")?.SetVisibleSilently(value);
             }
         }
+    }
+
+    private bool _wifiProfilesVisible = true;
+    public bool WifiProfilesVisible
+    {
+        get => _wifiProfilesVisible;
+        set
+        {
+            if (_wifiProfilesVisible != value)
+            {
+                _wifiProfilesVisible = value;
+                OnPropertyChanged();
+                UpdateSectionVisibility("WifiProfiles", value);
+                FindSectionItem("WifiProfiles")?.SetVisibleSilently(value);
+            }
+        }
+    }
+
+    // --- Starred Sections for Quick Toolbar ---
+    public bool QuickIpStarred
+    {
+        get => _settings.QuickIpStarred;
+        set { if (_settings.QuickIpStarred != value) { _settings.QuickIpStarred = value; OnPropertyChanged(); SaveStarredSettings(); FindSectionItem("QuickIp")?.SetStarredSilently(value); } }
+    }
+    public bool WifiStarred
+    {
+        get => _settings.WifiStarred;
+        set { if (_settings.WifiStarred != value) { _settings.WifiStarred = value; OnPropertyChanged(); SaveStarredSettings(); FindSectionItem("Wifi")?.SetStarredSilently(value); } }
+    }
+    public bool WifiProfilesStarred
+    {
+        get => _settings.WifiProfilesStarred;
+        set { if (_settings.WifiProfilesStarred != value) { _settings.WifiProfilesStarred = value; OnPropertyChanged(); SaveStarredSettings(); FindSectionItem("WifiProfiles")?.SetStarredSilently(value); } }
+    }
+    public bool SpeedTestStarred
+    {
+        get => _settings.SpeedTestStarred;
+        set { if (_settings.SpeedTestStarred != value) { _settings.SpeedTestStarred = value; OnPropertyChanged(); SaveStarredSettings(); FindSectionItem("SpeedTest")?.SetStarredSilently(value); } }
+    }
+    public bool StreamClientStarred
+    {
+        get => _settings.StreamClientStarred;
+        set { if (_settings.StreamClientStarred != value) { _settings.StreamClientStarred = value; OnPropertyChanged(); SaveStarredSettings(); FindSectionItem("StreamClient")?.SetStarredSilently(value); } }
+    }
+    public bool StreamServerStarred
+    {
+        get => _settings.StreamServerStarred;
+        set { if (_settings.StreamServerStarred != value) { _settings.StreamServerStarred = value; OnPropertyChanged(); SaveStarredSettings(); FindSectionItem("StreamServer")?.SetStarredSilently(value); } }
+    }
+    public bool ActivityLogStarred
+    {
+        get => _settings.ActivityLogStarred;
+        set { if (_settings.ActivityLogStarred != value) { _settings.ActivityLogStarred = value; OnPropertyChanged(); SaveStarredSettings(); FindSectionItem("ActivityLog")?.SetStarredSilently(value); } }
+    }
+    public bool TestResultsStarred
+    {
+        get => _settings.TestResultsStarred;
+        set { if (_settings.TestResultsStarred != value) { _settings.TestResultsStarred = value; OnPropertyChanged(); SaveStarredSettings(); FindSectionItem("TestResults")?.SetStarredSilently(value); } }
+    }
+
+    private void SaveStarredSettings()
+    {
+        _ = _settingsRepo.SaveAsync(_settings);
     }
 
     private bool _speedTestVisible = true;
@@ -575,6 +667,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _settings.StreamServerVisible = StreamServerVisible;
         _settings.ActivityLogVisible = ActivityLogVisible;
         _settings.TestResultsVisible = TestResultsSectionVisible;
+        _settings.WifiProfilesVisible = WifiProfilesVisible;
         _ = _settingsRepo.SaveAsync(_settings);
     }
 
@@ -1074,11 +1167,27 @@ if ($wifi) {
         }
     }
 
-    public void AddActivityLog(string category, string message)
+    public void JumpToWifiProfile(string ssid)
+    {
+        if (string.IsNullOrWhiteSpace(ssid)) return;
+
+        WifiProfilesVisible = true;
+        WifiProfilesExpanded = true;
+        WifiProfilesPanel.SearchText = ssid.Trim();
+        WifiProfilesPanel.SelectAndRevealProfile(ssid.Trim());
+    }
+
+    public void AddActivityLog(string category, string message, string? associatedSsid = null)
     {
         _dispatcher.BeginInvoke(() =>
         {
-            var entry = new ActivityLogEntryViewModel(category, message);
+            var entry = new ActivityLogEntryViewModel(
+                category,
+                message,
+                associatedSsid,
+                onFindInProfiles: s => JumpToWifiProfile(s),
+                onLog: (cat, msg) => AddActivityLog(cat, msg));
+
             ActivityLog.Insert(0, entry);
             while (ActivityLog.Count > 200)
             {
@@ -1098,7 +1207,13 @@ if ($wifi) {
 
     private void OnWifiEventLogged(object? sender, WifiEventViewModel e)
     {
-        AddActivityLog("WLAN", $"{e.TypeText}: {e.DetailsText}");
+        string? ssid = !string.IsNullOrEmpty(e.Event.CurrentSsid) ? e.Event.CurrentSsid : e.Event.PreviousSsid;
+        AddActivityLog("WLAN", $"{e.TypeText}: {e.DetailsText}", ssid);
+
+        if (!string.IsNullOrEmpty(e.Event.CurrentSsid))
+        {
+            WifiProfilesPanel.AddOrUpdateRecord(e.Event.CurrentSsid);
+        }
     }
 
     private void OnSpeedTestCompleted(object? sender, SpeedTestResultViewModel e)
@@ -1126,6 +1241,7 @@ if ($wifi) {
 
         // Initialize Wi-Fi Panel cache
         await WifiPanel.InitializeAsync();
+        await WifiProfilesPanel.InitializeAsync();
 
         // Load profiles into buttons
         RefreshProfileButtons();
