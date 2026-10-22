@@ -18,6 +18,8 @@
     <Resource Include="app.ico" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
+    <PackageReference Include="ZXing.Net.Bindings.Windows.Compatibility" Version="0.16.16" />
     <ProjectReference Include="..\Etherprof.Contracts\Etherprof.Contracts.csproj" />
     <ProjectReference Include="..\Etherprof.Core\Etherprof.Core.csproj" />
     <ProjectReference Include="..\Etherprof.Storage\Etherprof.Storage.csproj" />

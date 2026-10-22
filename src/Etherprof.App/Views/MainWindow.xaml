@@ -97,6 +97,18 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="QrScanToggleButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource SectionToggleButtonStyle}">
+            <Setter Property="Background" Value="#F0FDF4" />
+            <Setter Property="Foreground" Value="#16A34A" />
+            <Setter Property="BorderBrush" Value="#BBF7D0" />
+            <Style.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Background" Value="#16A34A" />
+                    <Setter Property="Foreground" Value="White" />
+                    <Setter Property="BorderBrush" Value="#15803D" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
         <Style x:Key="WifiProfilesToggleButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource SectionToggleButtonStyle}">
             <Setter Property="Background" Value="#F5F3FF" />
             <Setter Property="Foreground" Value="#6D28D9" />
@@ -390,6 +402,9 @@
                             <ToggleButton Content="📋 Log" IsChecked="{Binding ActivityLogVisible, Mode=TwoWay}"
                                           Visibility="{Binding ActivityLogStarred, Converter={StaticResource BoolToVis}}"
                                           Style="{StaticResource LogToggleButtonStyle}" ToolTip="Show/Hide Activity &amp; Event Log" />
+                            <ToggleButton Content="📷 QR" IsChecked="{Binding QrScanVisible, Mode=TwoWay}"
+                                          Visibility="{Binding QrScanStarred, Converter={StaticResource BoolToVis}}"
+                                          Style="{StaticResource QrScanToggleButtonStyle}" ToolTip="Show/Hide QR Code Scanner &amp; Camera Ingestion" />
                             <ToggleButton Content="📊 Ping" IsChecked="{Binding TestResultsSectionVisible, Mode=TwoWay}"
                                           Visibility="{Binding TestResultsStarred, Converter={StaticResource BoolToVis}}"
                                           Style="{StaticResource PingToggleButtonStyle}" ToolTip="Show/Hide Test Set Results (Ping)" />
@@ -776,6 +791,140 @@
                     </StackPanel>
                 </Expander>
 
+                <!-- 2c. QR SCANNER EXPANDER -->
+                <Expander x:Name="qrScanExpander" Header="📷 QR SCANNER (CAMERA &amp; WI-FI INGESTION)"
+                          IsExpanded="{Binding QrScanExpanded, Mode=TwoWay}"
+                          Visibility="{Binding QrScanVisible, Converter={StaticResource BoolToVis}}"
+                          Style="{StaticResource CardExpander}"
+                          Background="#F0FDF4" BorderBrush="#BBF7D0" Foreground="#15803D">
+                    <StackPanel Margin="0,4,0,0" DataContext="{Binding QrScanPanel}">
+                        <!-- Top Action Controls & Status Bar -->
+                        <Border Background="#FFFFFF" BorderBrush="#DCFCE7" BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,0,0,6">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Content="📷 Capture &amp; Scan" Command="{Binding CaptureAndDecodeCommand}"
+                                            Style="{StaticResource ActionButton}" FontWeight="SemiBold"
+                                            Background="#16A34A" Foreground="White" BorderBrush="#15803D"
+                                            Padding="10,3" Height="26" Margin="0,0,4,0"
+                                            ToolTip="Snap a frame from default camera and decode QR code" />
+                                    <Button Content="📁 Open Image…" Command="{Binding OpenFileAndDecodeCommand}"
+                                            Style="{StaticResource ActionButton}" Padding="8,3" Height="26" Margin="0,0,4,0"
+                                            ToolTip="Decode QR code from saved image or screenshot file" />
+                                    <Button Content="✕ Clear" Command="{Binding ClearCommand}"
+                                            Style="{StaticResource ActionButton}" Padding="6,3" Height="26"
+                                            ToolTip="Clear current scan results and preview" />
+                                </StackPanel>
+
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,8,0">
+                                    <TextBlock Text="{Binding StatusMessage}" FontSize="11" FontWeight="Medium" Foreground="#166534" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding LastScanTime, StringFormat='Last scan: {0}'}" FontSize="9" Foreground="#64748B"
+                                               Visibility="{Binding HasDecodedText, Converter={StaticResource BoolToVis}}" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- Camera Preview & Scan Content Grid -->
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <!-- Camera Preview Thumbnail (if captured) -->
+                                <ColumnDefinition Width="Auto" />
+                                <!-- Decoded Results & Actions -->
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Camera Snapshot Preview Thumbnail -->
+                            <Border Grid.Column="0" Visibility="{Binding HasCapturedImage, Converter={StaticResource BoolToVis}}"
+                                    Background="#000000" BorderBrush="#86EFAC" BorderThickness="1" CornerRadius="4"
+                                    Margin="0,0,8,0" Padding="2" VerticalAlignment="Top">
+                                <StackPanel>
+                                    <Image Source="{Binding CapturedImage}" MaxWidth="160" MaxHeight="120"
+                                           Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+                                    <TextBlock Text="📷 Camera Preview" FontSize="9" Foreground="#E2E8F0"
+                                               HorizontalAlignment="Center" Margin="0,2,0,1" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Right Side: Decoded Content Card -->
+                            <StackPanel Grid.Column="1">
+                                <!-- Wi-Fi Network Details Card (if Wi-Fi QR) -->
+                                <Border Visibility="{Binding IsWifiPayload, Converter={StaticResource BoolToVis}}"
+                                        Background="#FFFFFF" BorderBrush="#86EFAC" BorderThickness="1.5" CornerRadius="4"
+                                        Padding="8,6" Margin="0,0,0,6">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,0,0,4">
+                                            <Button DockPanel.Dock="Right" Content="💾 Ingest into Saved Profiles"
+                                                    Command="{Binding IngestWifiProfileCommand}"
+                                                    Style="{StaticResource ActionButton}"
+                                                    Background="#15803D" Foreground="White" BorderBrush="#14532D"
+                                                    FontWeight="SemiBold" Padding="8,2" Height="24"
+                                                    ToolTip="Save network SSID and copy password to system profiles" />
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="📶 WI-FI NETWORK DETECTED" FontSize="11" FontWeight="Bold" Foreground="#15803D" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                                <Border CornerRadius="3" Padding="4,1" Background="#DCFCE7" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding ParsedAuthType, StringFormat='Auth: {0}'}" FontSize="9" FontWeight="SemiBold" Foreground="#166534" />
+                                                </Border>
+                                            </StackPanel>
+                                        </DockPanel>
+
+                                        <!-- SSID Row -->
+                                        <Grid Margin="0,2,0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="SSID:" FontSize="11" FontWeight="SemiBold" Foreground="#334155" VerticalAlignment="Center" Width="60" />
+                                            <TextBox Grid.Column="1" Style="{StaticResource SelectableLabel}"
+                                                     Text="{Binding ParsedSsid, Mode=OneWay}"
+                                                     FontWeight="Bold" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center" />
+                                            <Button Grid.Column="2" Content="📋 Copy SSID" Command="{Binding CopySsidCommand}"
+                                                    Style="{StaticResource ActionButton}" Padding="6,1" FontSize="10" Height="22" />
+                                        </Grid>
+
+                                        <!-- Password Row -->
+                                        <Grid Margin="0,2,0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Password:" FontSize="11" FontWeight="SemiBold" Foreground="#334155" VerticalAlignment="Center" Width="60" />
+                                            <TextBox Grid.Column="1" Style="{StaticResource SelectableLabel}"
+                                                     Text="{Binding DisplayPassword, Mode=OneWay}"
+                                                     FontFamily="Consolas" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                                <Button Content="{Binding PasswordToggleIcon}" Command="{Binding TogglePasswordVisibilityCommand}"
+                                                        Style="{StaticResource ActionButton}" Padding="6,1" FontSize="10" Height="22" Margin="0,0,4,0"
+                                                        Visibility="{Binding HasPassword, Converter={StaticResource BoolToVis}}" />
+                                                <Button Content="📋 Copy Password" Command="{Binding CopyPasswordCommand}"
+                                                        Style="{StaticResource ActionButton}" Padding="6,1" FontSize="10" Height="22"
+                                                        Visibility="{Binding HasPassword, Converter={StaticResource BoolToVis}}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Raw Payload Card (for non-Wi-Fi or inspecting raw QR text) -->
+                                <Border Visibility="{Binding HasDecodedText, Converter={StaticResource BoolToVis}}"
+                                        Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="4" Padding="8,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Payload:" FontSize="10" FontWeight="SemiBold" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                        <TextBox Grid.Column="1" Style="{StaticResource SelectableLabel}"
+                                                 Text="{Binding DecodedText, Mode=OneWay}"
+                                                 FontFamily="Consolas" FontSize="11" Foreground="#1E293B" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                        <Button Grid.Column="2" Content="📋 Copy All" Command="{Binding CopyPayloadCommand}"
+                                                Style="{StaticResource ActionButton}" Padding="6,1" FontSize="10" Height="22" Margin="4,0,0,0" />
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Expander>
                 <!-- 3. SPEED TEST EXPANDER -->
                 <Expander x:Name="speedTestExpander" Header="🚀 SPEED TEST" IsExpanded="{Binding SpeedTestExpanded, Mode=TwoWay}" Style="{StaticResource CardExpander}"
                           Background="#FFFBEB" BorderBrush="#FDE68A" Foreground="#B45309">

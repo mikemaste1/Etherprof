@@ -56,4 +56,67 @@ public class WifiQrCodeTests
         // Bottom-left finder pattern center (3, size - 4) must be true (dark)
         Assert.True(matrix[size - 4, 3]);
     }
+
+    [Fact]
+    public void Parse_StandardWpaWifiString_ParsesSuccessfully()
+    {
+        string qr = "WIFI:S:MyNetwork;T:WPA;P:SecretPassword123;H:false;;";
+        bool success = WifiQrParser.TryParse(qr, out var info);
+
+        Assert.True(success);
+        Assert.NotNull(info);
+        Assert.Equal("MyNetwork", info.Ssid);
+        Assert.Equal("SecretPassword123", info.Password);
+        Assert.Equal("WPA", info.AuthType);
+        Assert.False(info.IsHidden);
+    }
+
+    [Fact]
+    public void Parse_EscapedCharacters_UnescapesProperly()
+    {
+        string qr = @"WIFI:S:My\;Office\:\""Net\"";T:WPA;P:Pass\;123\:\""abc\\xyz;;";
+        bool success = WifiQrParser.TryParse(qr, out var info);
+
+        Assert.True(success);
+        Assert.NotNull(info);
+        Assert.Equal("My;Office:\"Net\"", info.Ssid);
+        Assert.Equal("Pass;123:\"abc\\xyz", info.Password);
+    }
+
+    [Fact]
+    public void Parse_OpenNetworkNoPass_ParsesSuccessfully()
+    {
+        string qr = "WIFI:S:PublicWifi;T:nopass;;";
+        bool success = WifiQrParser.TryParse(qr, out var info);
+
+        Assert.True(success);
+        Assert.NotNull(info);
+        Assert.Equal("PublicWifi", info.Ssid);
+        Assert.Null(info.Password);
+        Assert.Equal("nopass", info.AuthType);
+        Assert.False(info.IsHidden);
+    }
+
+    [Fact]
+    public void Parse_DifferentFieldOrder_ParsesSuccessfully()
+    {
+        string qr = "WIFI:T:WPA2;P:Secret123;H:true;S:GuestWifi;;";
+        bool success = WifiQrParser.TryParse(qr, out var info);
+
+        Assert.True(success);
+        Assert.NotNull(info);
+        Assert.Equal("GuestWifi", info.Ssid);
+        Assert.Equal("Secret123", info.Password);
+        Assert.Equal("WPA2", info.AuthType);
+        Assert.True(info.IsHidden);
+    }
+
+    [Fact]
+    public void Parse_InvalidOrNonWifiString_ReturnsFalse()
+    {
+        Assert.False(WifiQrParser.TryParse("https://google.com", out _));
+        Assert.False(WifiQrParser.TryParse("", out _));
+        Assert.False(WifiQrParser.TryParse(null, out _));
+        Assert.False(WifiQrParser.TryParse("WIFI:T:WPA;;", out _)); // missing SSID
+    }
 }

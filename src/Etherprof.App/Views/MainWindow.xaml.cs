@@ -223,6 +223,7 @@ public partial class MainWindow : Window
         _sections["StreamServer"] = streamServerExpander;
         _sections["ActivityLog"] = activityLogExpander;
         _sections["TestResults"] = testResultsExpander;
+        _sections["QrScan"] = qrScanExpander;
 
         // Clear default static XAML children
         sectionsContainer.Children.Clear();
@@ -263,6 +264,7 @@ public partial class MainWindow : Window
         "StreamServer" => vm.StreamServerVisible,
         "ActivityLog" => vm.ActivityLogVisible,
         "TestResults" => vm.TestResultsSectionVisible,
+        "QrScan" => vm.QrScanVisible,
         _ => true
     };
 

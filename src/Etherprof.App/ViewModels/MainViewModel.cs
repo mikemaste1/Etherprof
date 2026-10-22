@@ -31,6 +31,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public WifiPanelViewModel WifiPanel { get; }
     public WifiProfilesPanelViewModel WifiProfilesPanel { get; }
+    public QrScanPanelViewModel QrScanPanel { get; } = new();
     public SpeedTestPanelViewModel SpeedTestPanel { get; }
     public ObservableCollection<SectionItemViewModel> SectionItems { get; } = new();
 
@@ -233,6 +234,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         WifiPanel.OpenAliasEditor = (bssid, alias) => OpenAliasEditorDialog?.Invoke(bssid, alias);
         WifiPanel.LogAction = (cat, msg) => AddActivityLog(cat, msg);
         WifiProfilesPanel.LogAction = (cat, msg) => AddActivityLog(cat, msg);
+        QrScanPanel.LogAction = (cat, msg) => AddActivityLog(cat, msg);
+        QrScanPanel.OnIngestWifiProfile = ssid => JumpToWifiProfile(ssid);
 
         // Wire commands
         ApplyProfileCommand = new RelayCommand(o => _ = ApplyProfileAsync(o as ProfileButtonViewModel));
@@ -363,6 +366,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _quickIpExpanded = _settings.QuickIpExpanded;
         _wifiExpanded = _settings.WifiExpanded;
         _wifiProfilesExpanded = _settings.WifiProfilesExpanded;
+        _qrScanExpanded = _settings.QrScanExpanded;
         _speedTestExpanded = _settings.SpeedTestExpanded;
         _streamClientExpanded = _settings.StreamClientExpanded;
         _streamServerExpanded = _settings.StreamServerExpanded;
@@ -383,6 +387,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _streamServerVisible = _settings.StreamServerVisible;
         _activityLogVisible = _settings.ActivityLogVisible;
         _testResultsSectionVisible = _settings.TestResultsVisible;
+        _qrScanVisible = _settings.QrScanVisible;
 
         // Initialize consolidated section items
         SectionItems.Add(new SectionItemViewModel("QuickIp", "⚡ IP & Profiles", "⚡", "Quick IP configuration and profiles", QuickIpVisible, QuickIpStarred, v => QuickIpVisible = v, s => QuickIpStarred = s));
@@ -393,6 +398,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         SectionItems.Add(new SectionItemViewModel("StreamServer", "🖥️ Stream Server", "🖥️", "Local UDP/TCP stream benchmark server", StreamServerVisible, StreamServerStarred, v => StreamServerVisible = v, s => StreamServerStarred = s));
         SectionItems.Add(new SectionItemViewModel("ActivityLog", "📋 Activity & Event Log", "📋", "System, network, and Wi-Fi event log", ActivityLogVisible, ActivityLogStarred, v => ActivityLogVisible = v, s => ActivityLogStarred = s));
         SectionItems.Add(new SectionItemViewModel("TestResults", "📊 Ping & Tests", "📊", "Continuous ping latency and test sets", TestResultsSectionVisible, TestResultsStarred, v => TestResultsSectionVisible = v, s => TestResultsStarred = s));
+        SectionItems.Add(new SectionItemViewModel("QrScan", "📷 QR Scanner", "📷", "Scan QR code via camera and copy to clipboard", QrScanVisible, QrScanStarred, v => QrScanVisible = v, s => QrScanStarred = s));
 
         // Initialize internet check
         _internetCheckEnabled = _settings.InternetCheckEnabled;
@@ -421,6 +427,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
         set { if (_wifiProfilesExpanded != value) { _wifiProfilesExpanded = value; OnPropertyChanged(); SaveExpanderStates(); } }
     }
 
+
+    private bool _qrScanExpanded;
+    public bool QrScanExpanded
+    {
+        get => _qrScanExpanded;
+        set { if (_qrScanExpanded != value) { _qrScanExpanded = value; OnPropertyChanged(); SaveExpanderStates(); } }
+    }
     private bool _speedTestExpanded;
     public bool SpeedTestExpanded
     {
@@ -466,6 +479,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _settings.ActivityLogExpanded = ActivityLogExpanded;
         _settings.TestResultsExpanded = TestResultsExpanded;
         _settings.WifiProfilesExpanded = WifiProfilesExpanded;
+        _settings.QrScanExpanded = QrScanExpanded;
         _ = _settingsRepo.SaveAsync(_settings);
     }
 
@@ -573,6 +587,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
         get => _settings.ActivityLogStarred;
         set { if (_settings.ActivityLogStarred != value) { _settings.ActivityLogStarred = value; OnPropertyChanged(); SaveStarredSettings(); FindSectionItem("ActivityLog")?.SetStarredSilently(value); } }
     }
+    public bool QrScanStarred
+    {
+        get => _settings.QrScanStarred;
+        set { if (_settings.QrScanStarred != value) { _settings.QrScanStarred = value; OnPropertyChanged(); SaveStarredSettings(); FindSectionItem("QrScan")?.SetStarredSilently(value); } }
+    }
     public bool TestResultsStarred
     {
         get => _settings.TestResultsStarred;
@@ -664,6 +683,22 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    private bool _qrScanVisible = true;
+    public bool QrScanVisible
+    {
+        get => _qrScanVisible;
+        set
+        {
+            if (_qrScanVisible != value)
+            {
+                _qrScanVisible = value;
+                OnPropertyChanged();
+                UpdateSectionVisibility("QrScan", value);
+                FindSectionItem("QrScan")?.SetVisibleSilently(value);
+            }
+        }
+    }
+
     private void SaveSectionVisibility()
     {
         _settings.QuickIpVisible = QuickIpVisible;
@@ -674,6 +709,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _settings.ActivityLogVisible = ActivityLogVisible;
         _settings.TestResultsVisible = TestResultsSectionVisible;
         _settings.WifiProfilesVisible = WifiProfilesVisible;
+        _settings.QrScanVisible = QrScanVisible;
         _ = _settingsRepo.SaveAsync(_settings);
     }
 

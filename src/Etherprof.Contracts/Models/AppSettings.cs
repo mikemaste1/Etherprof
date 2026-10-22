@@ -25,6 +25,7 @@ public sealed class AppSettings
     public bool ActivityLogExpanded { get; set; } = false;
     public bool TestResultsExpanded { get; set; } = false;
     public bool WifiProfilesExpanded { get; set; } = false;
+    public bool QrScanExpanded { get; set; } = false;
 
     // Ping Settings
     public bool IsQuickPing { get; set; } = false;
@@ -45,6 +46,7 @@ public sealed class AppSettings
     public bool ActivityLogVisible { get; set; } = true;
     public bool TestResultsVisible { get; set; } = true;
     public bool WifiProfilesVisible { get; set; } = true;
+    public bool QrScanVisible { get; set; } = true;
 
     // Starred Sections (shown in top section toolbar)
     public bool QuickIpStarred { get; set; } = true;
@@ -55,10 +57,11 @@ public sealed class AppSettings
     public bool StreamServerStarred { get; set; } = false;
     public bool ActivityLogStarred { get; set; } = true;
     public bool TestResultsStarred { get; set; } = true;
+    public bool QrScanStarred { get; set; } = false;
 
     public List<string> SectionOrder { get; set; } = new()
     {
-        "QuickIp", "Wifi", "WifiProfiles", "SpeedTest", "StreamClient", "StreamServer", "ActivityLog", "TestResults"
+        "QuickIp", "Wifi", "WifiProfiles", "SpeedTest", "StreamClient", "StreamServer", "ActivityLog", "TestResults", "QrScan"
     };
 
     // Internet Check (Google DNS 8.8.8.8 -> ONLINE / OFFLINE window title)
