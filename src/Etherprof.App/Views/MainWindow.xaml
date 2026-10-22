@@ -802,12 +802,21 @@
                         <Border Background="#FFFFFF" BorderBrush="#DCFCE7" BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,0,0,6">
                             <DockPanel>
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button Content="📷 Capture &amp; Scan" Command="{Binding CaptureAndDecodeCommand}"
-                                            Style="{StaticResource ActionButton}" FontWeight="SemiBold"
-                                            Background="#16A34A" Foreground="White" BorderBrush="#15803D"
+                                    <Button Content="🎥 Live Video Bar" Command="{Binding OpenDetachedBarCommand}"
+                                            Style="{StaticResource ActionButton}" FontWeight="Bold"
+                                            Background="#15803D" Foreground="White" BorderBrush="#14532D"
                                             Padding="10,3" Height="26" Margin="0,0,4,0"
-                                            ToolTip="Snap a frame from default camera and decode QR code" />
-                                    <Button Content="📁 Open Image…" Command="{Binding OpenFileAndDecodeCommand}"
+                                            ToolTip="Open detached floating live video bar with scanning on the fly" />
+                                    <Button Content="📋 Paste Image" Command="{Binding PasteImageAndDecodeCommand}"
+                                            Style="{StaticResource ActionButton}" FontWeight="SemiBold"
+                                            Background="#F0FDF4" Foreground="#15803D" BorderBrush="#86EFAC"
+                                            Padding="9,3" Height="26" Margin="0,0,4,0"
+                                            ToolTip="Decode QR code from image in clipboard (Ctrl+V)" />
+                                    <Button Content="📷 Snap Frame" Command="{Binding CaptureAndDecodeCommand}"
+                                            Style="{StaticResource ActionButton}"
+                                            Padding="8,3" Height="26" Margin="0,0,4,0"
+                                            ToolTip="Snap a single frame from default camera and decode QR code" />
+                                    <Button Content="📁 Open File…" Command="{Binding OpenFileAndDecodeCommand}"
                                             Style="{StaticResource ActionButton}" Padding="8,3" Height="26" Margin="0,0,4,0"
                                             ToolTip="Decode QR code from saved image or screenshot file" />
                                     <Button Content="✕ Clear" Command="{Binding ClearCommand}"

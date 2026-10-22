@@ -1,3 +1,5 @@
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows;
 using Etherprof.App.ViewModels;
 using Etherprof.Contracts.Models;
@@ -19,6 +21,7 @@ public partial class MainWindow : Window
     }
 
     private MiniHudWindow? _hudWindow;
+    private LiveQrScannerWindow? _qrLiveWindow;
     private bool _autoShownByMinimize;
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -38,6 +41,12 @@ public partial class MainWindow : Window
             vm.RequestShowMiniHud = () => ShowMiniHud(vm);
             vm.RequestHideMiniHud = () => HideMiniHud();
             vm.RestoreMainWindow = RestoreFromHud;
+
+            // Wire Detached Live QR Scanner Bar
+            vm.QrScanPanel.OpenDetachedBarRequested = () => ShowLiveQrBar(vm);
+            vm.QrScanPanel.CloseDetachedBarRequested = () => HideLiveQrBar();
+
+            KeyDown += OnMainWindowKeyDown;
 
             // Restore HUD if it was active
             if (vm.IsMiniHudVisible)
@@ -162,6 +171,39 @@ public partial class MainWindow : Window
         _hudWindow?.Hide();
     }
 
+    private void ShowLiveQrBar(MainViewModel vm)
+    {
+        if (_qrLiveWindow is null)
+        {
+            _qrLiveWindow = new LiveQrScannerWindow(vm, vm.Settings, vm.SettingsRepo);
+            _qrLiveWindow.Closed += (s, e) => _qrLiveWindow = null;
+        }
+        _qrLiveWindow.Show();
+        _qrLiveWindow.Activate();
+        vm.QrScanPanel.IsDetachedBarOpen = true;
+    }
+
+    private void HideLiveQrBar()
+    {
+        _qrLiveWindow?.Hide();
+    }
+
+    private void OnMainWindowKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+        {
+            if (Keyboard.FocusedElement is not TextBox tb || tb.IsReadOnly)
+            {
+                if (DataContext is MainViewModel vm)
+                {
+                    vm.QrScanVisible = true;
+                    vm.QrScanExpanded = true;
+                    vm.QrScanPanel.PasteImageAndDecode();
+                    e.Handled = true;
+                }
+            }
+        }
+    }
     private void RestoreFromHud()
     {
         if (WindowState == WindowState.Minimized)

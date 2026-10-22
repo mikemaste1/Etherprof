@@ -37,6 +37,11 @@ public sealed class AppSettings
     public double? MiniHudLeft { get; set; }
     public double? MiniHudTop { get; set; }
 
+    // Live QR Scanner Bar
+    public double? QrLiveBarLeft { get; set; }
+    public double? QrLiveBarTop { get; set; }
+    public bool QrLiveBarTopmost { get; set; } = true;
+
     // Section Visibility & Order (dynamic hide/show, persisted in activation log order)
     public bool QuickIpVisible { get; set; } = true;
     public bool WifiVisible { get; set; } = true;

@@ -119,4 +119,23 @@ public class WifiQrCodeTests
         Assert.False(WifiQrParser.TryParse(null, out _));
         Assert.False(WifiQrParser.TryParse("WIFI:T:WPA;;", out _)); // missing SSID
     }
+
+    [Fact]
+    public void Format_And_Parse_Roundtrip_MatchesOriginalValues()
+    {
+        string ssid = "Office-5G_Guest";
+        string password = "SecretPass!@#123;with:escapes";
+        string auth = "WPA";
+        bool isHidden = true;
+
+        string formatted = WifiQrFormatter.Format(ssid, password, auth, isHidden);
+        bool success = WifiQrParser.TryParse(formatted, out var parsed);
+
+        Assert.True(success);
+        Assert.NotNull(parsed);
+        Assert.Equal(ssid, parsed.Ssid);
+        Assert.Equal(password, parsed.Password);
+        Assert.Equal(auth, parsed.AuthType);
+        Assert.Equal(isHidden, parsed.IsHidden);
+    }
 }

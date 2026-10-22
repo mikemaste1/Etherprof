@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Media;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using Etherprof.App.Services;
 using Etherprof.Core;
 using ZXing;
 using ZXing.Windows.Compatibility;
@@ -11,20 +13,92 @@ using ZXing.Windows.Compatibility;
 namespace Etherprof.App.ViewModels;
 
 /// <summary>
-/// ViewModel for the QR Scanner section.
-/// Captures camera preview images, decodes QR codes with ZXing.Net,
-/// automatically copies payload text to clipboard, and parses Wi-Fi
-/// credentials for easy copy and ingestion into Saved Wi-Fi Profiles.
+/// ViewModel for QR code scanning, supporting:
+/// 1. Detached live video bar with real-time on-the-fly QR decoding
+/// 2. Pasting images directly from clipboard (screenshots / copied images / image files)
+/// 3. Manual camera snapshot capture
+/// 4. Opening image files from disk
+/// 5. Automatic clipboard copying of QR payloads and Wi-Fi credentials
+/// 6. Direct ingestion into Saved Wi-Fi Profiles
 /// </summary>
-public sealed class QrScanPanelViewModel : ViewModelBase
+public sealed class QrScanPanelViewModel : ViewModelBase, IAsyncDisposable
 {
+    private readonly LiveCameraCapture _liveCamera = new();
+    private readonly BarcodeReader _barcodeReader;
+    private int _isDecodingFlag;
+    private string? _lastDecodedCode;
+    private DateTimeOffset _lastDecodeTime = DateTimeOffset.MinValue;
+
     // ----- Status & Display Properties -----
 
-    private string _statusMessage = "Ready — position QR code in front of camera and click Capture";
+    private string _statusMessage = "Ready — start live scan or paste image from clipboard";
     public string StatusMessage
     {
         get => _statusMessage;
         set { if (_statusMessage != value) { _statusMessage = value; OnPropertyChanged(); } }
+    }
+
+    private string? _liveDecodeNotification;
+    public string? LiveDecodeNotification
+    {
+        get => _liveDecodeNotification;
+        set
+        {
+            if (_liveDecodeNotification != value)
+            {
+                _liveDecodeNotification = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasLiveDecodeNotification));
+            }
+        }
+    }
+
+    public bool HasLiveDecodeNotification => !string.IsNullOrEmpty(LiveDecodeNotification);
+
+    private bool _isLiveScanning;
+    public bool IsLiveScanning
+    {
+        get => _isLiveScanning;
+        set
+        {
+            if (_isLiveScanning != value)
+            {
+                _isLiveScanning = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(LiveScanButtonText));
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+    }
+
+    public string LiveScanButtonText => IsLiveScanning ? "⏹ Stop Live Scan" : "🎥 Live Video Bar";
+
+    private bool _isDetachedBarOpen;
+    public bool IsDetachedBarOpen
+    {
+        get => _isDetachedBarOpen;
+        set
+        {
+            if (_isDetachedBarOpen != value)
+            {
+                _isDetachedBarOpen = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private bool _isDetachedBarTopmost = true;
+    public bool IsDetachedBarTopmost
+    {
+        get => _isDetachedBarTopmost;
+        set
+        {
+            if (_isDetachedBarTopmost != value)
+            {
+                _isDetachedBarTopmost = value;
+                OnPropertyChanged();
+            }
+        }
     }
 
     private bool _isCapturing;
@@ -58,6 +132,23 @@ public sealed class QrScanPanelViewModel : ViewModelBase
     }
 
     public bool HasCapturedImage => CapturedImage != null;
+
+    private BitmapSource? _liveVideoFrame;
+    public BitmapSource? LiveVideoFrame
+    {
+        get => _liveVideoFrame;
+        set
+        {
+            if (!ReferenceEquals(_liveVideoFrame, value))
+            {
+                _liveVideoFrame = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasLiveVideoFrame));
+            }
+        }
+    }
+
+    public bool HasLiveVideoFrame => LiveVideoFrame != null;
 
     private string _decodedText = string.Empty;
     public string DecodedText
@@ -144,6 +235,10 @@ public sealed class QrScanPanelViewModel : ViewModelBase
 
     // ----- Commands -----
 
+    public ICommand ToggleLiveScanCommand { get; }
+    public ICommand OpenDetachedBarCommand { get; }
+    public ICommand CloseDetachedBarCommand { get; }
+    public ICommand PasteImageAndDecodeCommand { get; }
     public ICommand CaptureAndDecodeCommand { get; }
     public ICommand OpenFileAndDecodeCommand { get; }
     public ICommand CopyPayloadCommand { get; }
@@ -157,9 +252,46 @@ public sealed class QrScanPanelViewModel : ViewModelBase
 
     public Action<string, string>? LogAction { get; set; }
     public Action<string>? OnIngestWifiProfile { get; set; }
+    public Action? OpenDetachedBarRequested { get; set; }
+    public Action? CloseDetachedBarRequested { get; set; }
 
     public QrScanPanelViewModel()
     {
+        _barcodeReader = new BarcodeReader
+        {
+            AutoRotate = true,
+            Options = new ZXing.Common.DecodingOptions
+            {
+                TryHarder = true,
+                PossibleFormats = new[] { BarcodeFormat.QR_CODE }
+            }
+        };
+
+        _liveCamera.FrameArrived += OnLiveCameraFrameArrived;
+        _liveCamera.ErrorOccurred += OnLiveCameraError;
+
+        ToggleLiveScanCommand = new RelayCommand(
+            () => _ = ToggleLiveScanAsync(),
+            () => !IsCapturing);
+
+        OpenDetachedBarCommand = new RelayCommand(
+            () =>
+            {
+                OpenDetachedBarRequested?.Invoke();
+                if (!IsLiveScanning) _ = StartLiveScanAsync();
+            });
+
+        CloseDetachedBarCommand = new RelayCommand(
+            () =>
+            {
+                CloseDetachedBarRequested?.Invoke();
+                if (IsLiveScanning) _ = StopLiveScanAsync();
+            });
+
+        PasteImageAndDecodeCommand = new RelayCommand(
+            () => PasteImageAndDecode(),
+            () => !IsCapturing);
+
         CaptureAndDecodeCommand = new RelayCommand(
             () => _ = CaptureAndDecodeAsync(),
             () => !IsCapturing);
@@ -190,8 +322,194 @@ public sealed class QrScanPanelViewModel : ViewModelBase
 
         ClearCommand = new RelayCommand(
             () => Clear(),
-            () => HasCapturedImage || HasDecodedText);
+            () => HasCapturedImage || HasLiveVideoFrame || HasDecodedText);
     }
+
+    // ----- Live Camera Streaming & On-the-Fly Decoding -----
+
+    public async Task ToggleLiveScanAsync()
+    {
+        if (IsLiveScanning)
+        {
+            await StopLiveScanAsync();
+        }
+        else
+        {
+            OpenDetachedBarRequested?.Invoke();
+            await StartLiveScanAsync();
+        }
+    }
+
+    public async Task StartLiveScanAsync()
+    {
+        if (IsLiveScanning) return;
+        StatusMessage = "🎥 Starting live camera feed…";
+
+        bool ok = await _liveCamera.StartAsync();
+        if (ok)
+        {
+            IsLiveScanning = true;
+            StatusMessage = "🎥 Live scanning active — hold QR code in front of camera";
+            LogAction?.Invoke("QR Scan", "Started live camera QR scanner.");
+        }
+        else
+        {
+            StatusMessage = "❌ Failed to start live camera feed.";
+        }
+    }
+
+    public async Task StopLiveScanAsync()
+    {
+        if (!IsLiveScanning) return;
+        await _liveCamera.StopAsync();
+        IsLiveScanning = false;
+        LiveVideoFrame = null;
+        StatusMessage = "Live camera scanning stopped.";
+        LogAction?.Invoke("QR Scan", "Stopped live camera QR scanner.");
+    }
+
+    private void OnLiveCameraFrameArrived(byte[] imageBytes)
+    {
+        // 1. Update UI Video Frame
+        try
+        {
+            using var ms = new MemoryStream(imageBytes);
+            var bi = new BitmapImage();
+            bi.BeginInit();
+            bi.CacheOption = BitmapCacheOption.OnLoad;
+            bi.StreamSource = ms;
+            bi.EndInit();
+            bi.Freeze();
+
+            Application.Current?.Dispatcher.BeginInvoke(() =>
+            {
+                LiveVideoFrame = bi;
+                CapturedImage = bi;
+            });
+        }
+        catch { }
+
+        // 2. Decode QR on-the-fly (skip frame if previous decode is still in flight)
+        if (Interlocked.CompareExchange(ref _isDecodingFlag, 1, 0) == 0)
+        {
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    using var decodeMs = new MemoryStream(imageBytes);
+                    using var bmp = new Bitmap(decodeMs);
+                    var result = _barcodeReader.Decode(bmp);
+
+                    if (result != null && !string.IsNullOrWhiteSpace(result.Text))
+                    {
+                        string text = result.Text.Trim();
+                        var now = DateTimeOffset.UtcNow;
+
+                        // Avoid repeated clobbering for identical code within 3 seconds
+                        if (!string.Equals(text, _lastDecodedCode, StringComparison.Ordinal) ||
+                            (now - _lastDecodeTime).TotalSeconds > 3)
+                        {
+                            _lastDecodedCode = text;
+                            _lastDecodeTime = now;
+
+                            Application.Current?.Dispatcher.BeginInvoke(() =>
+                            {
+                                ProcessDecodeResult(text, isLive: true);
+                            });
+                        }
+                    }
+                }
+                catch { }
+                finally
+                {
+                    Interlocked.Exchange(ref _isDecodingFlag, 0);
+                }
+            });
+        }
+    }
+
+    private void OnLiveCameraError(string err)
+    {
+        Application.Current?.Dispatcher.BeginInvoke(() =>
+        {
+            StatusMessage = $"❌ Camera error: {err}";
+            LogAction?.Invoke("QR Scan", $"Camera error: {err}");
+        });
+    }
+
+    // ----- Paste Image from Clipboard -----
+
+    public void PasteImageAndDecode()
+    {
+        try
+        {
+            BitmapSource? bitmapSource = null;
+
+            if (Clipboard.ContainsImage())
+            {
+                bitmapSource = Clipboard.GetImage();
+            }
+            else if (Clipboard.ContainsFileDropList())
+            {
+                var files = Clipboard.GetFileDropList();
+                foreach (var file in files)
+                {
+                    if (!string.IsNullOrWhiteSpace(file) && File.Exists(file))
+                    {
+                        string ext = Path.GetExtension(file).ToLowerInvariant();
+                        if (ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif" or ".webp")
+                        {
+                            var bi = new BitmapImage();
+                            bi.BeginInit();
+                            bi.CacheOption = BitmapCacheOption.OnLoad;
+                            bi.UriSource = new Uri(file);
+                            bi.EndInit();
+                            bi.Freeze();
+                            bitmapSource = bi;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (bitmapSource == null)
+            {
+                StatusMessage = "⚠️ No image found in clipboard. Copy an image or screenshot first.";
+                return;
+            }
+
+            CapturedImage = bitmapSource;
+            LiveVideoFrame = bitmapSource;
+            StatusMessage = "🔍 Scanning pasted image for QR code…";
+
+            // Convert BitmapSource to System.Drawing.Bitmap for decoding
+            using var memoryStream = new MemoryStream();
+            var encoder = new BmpBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
+            encoder.Save(memoryStream);
+            memoryStream.Position = 0;
+
+            using var sysBmp = new Bitmap(memoryStream);
+            var result = _barcodeReader.Decode(sysBmp);
+
+            if (result != null && !string.IsNullOrWhiteSpace(result.Text))
+            {
+                ProcessDecodeResult(result.Text.Trim(), isLive: false);
+                StatusMessage = $"✅ Decoded from clipboard image! {(IsWifiPayload ? $"(Wi-Fi: '{ParsedSsid}')" : "")}";
+            }
+            else
+            {
+                StatusMessage = "⚠️ Pasted image loaded, but no QR code was detected.";
+                LogAction?.Invoke("QR Scan", "Pasted image loaded, no QR code detected.");
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"❌ Failed to read clipboard image: {ex.Message}";
+        }
+    }
+
+    // ----- Snapshot / File Decoding -----
 
     private void UpdateWifiInfo()
     {
@@ -217,13 +535,14 @@ public sealed class QrScanPanelViewModel : ViewModelBase
 
         OnIngestWifiProfile?.Invoke(ParsedSsid);
         StatusMessage = $"💾 Saved '{ParsedSsid}' to Wi-Fi Profiles & copied password!";
+        LiveDecodeNotification = $"💾 Ingested '{ParsedSsid}' into Saved Profiles";
         LogAction?.Invoke("QR Scan", $"Ingested Wi-Fi network '{ParsedSsid}' into Saved Profiles");
     }
 
     public async Task CaptureAndDecodeAsync()
     {
         IsCapturing = true;
-        StatusMessage = "📷 Accessing camera…";
+        StatusMessage = "📷 Snapping single frame from camera…";
 
         string tempJpg = Path.Combine(Path.GetTempPath(), $"etherprof_scan_{Guid.NewGuid():N}.jpg");
         string tempPs1 = Path.Combine(Path.GetTempPath(), $"etherprof_cam_{Guid.NewGuid():N}.ps1");
@@ -238,14 +557,12 @@ public sealed class QrScanPanelViewModel : ViewModelBase
                 return;
             }
 
-            // Load captured image for preview
             LoadImagePreview(tempJpg);
 
-            // Decode image
             StatusMessage = "🔍 Scanning preview frame for QR code…";
             string? decoded = await Task.Run(() => DecodeQrFromFile(tempJpg));
 
-            ProcessDecodeResult(decoded);
+            ProcessDecodeResult(decoded, isLive: false);
         }
         catch (Exception ex)
         {
@@ -278,10 +595,10 @@ public sealed class QrScanPanelViewModel : ViewModelBase
             string filePath = dialog.FileName;
             LoadImagePreview(filePath);
 
-            StatusMessage = "🔍 Decoding QR code from image…";
+            StatusMessage = "🔍 Decoding QR code from file…";
             string? decoded = await Task.Run(() => DecodeQrFromFile(filePath));
 
-            ProcessDecodeResult(decoded);
+            ProcessDecodeResult(decoded, isLive: false);
         }
         catch (Exception ex)
         {
@@ -293,7 +610,7 @@ public sealed class QrScanPanelViewModel : ViewModelBase
         }
     }
 
-    private void ProcessDecodeResult(string? decoded)
+    private void ProcessDecodeResult(string? decoded, bool isLive)
     {
         LastScanTime = DateTime.Now.ToString("HH:mm:ss");
 
@@ -306,24 +623,30 @@ public sealed class QrScanPanelViewModel : ViewModelBase
 
         DecodedText = decoded.Trim();
 
-        // Automatically put payload text into clipboard as requested
+        // Always put raw code payload text into clipboard as requested
         CopyToClipboard(DecodedText, "QR Payload");
 
         if (IsWifiPayload)
         {
             StatusMessage = $"✅ Decoded Wi-Fi: '{ParsedSsid}' (Password copied to clipboard)";
+            LiveDecodeNotification = $"✅ Wi-Fi: '{ParsedSsid}' | Password copied!";
             LogAction?.Invoke("QR Scan", $"Decoded Wi-Fi network: '{ParsedSsid}', Security: {ParsedAuthType}");
+
             if (HasPassword)
             {
-                // Also copy the password specifically to clipboard
+                // Specifically copy Wi-Fi password for immediate connection
                 CopyToClipboard(ParsedPassword!, "Wi-Fi Password");
             }
         }
         else
         {
             StatusMessage = "✅ Decoded QR code! (Payload copied to clipboard)";
+            LiveDecodeNotification = $"✅ Decoded QR (Copied to clipboard)";
             LogAction?.Invoke("QR Scan", $"Decoded QR text: {Truncate(DecodedText, 60)}");
         }
+
+        // Auditory feedback on successful live/paste decode
+        try { SystemSounds.Asterisk.Play(); } catch { }
     }
 
     private void LoadImagePreview(string imagePath)
@@ -337,6 +660,7 @@ public sealed class QrScanPanelViewModel : ViewModelBase
             bi.EndInit();
             bi.Freeze();
             CapturedImage = bi;
+            LiveVideoFrame = bi;
         }
         catch { }
     }
@@ -434,7 +758,7 @@ $mc.Dispose()
     {
         try
         {
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            Application.Current?.Dispatcher.Invoke(() =>
             {
                 Clipboard.SetText(text);
             });
@@ -449,11 +773,19 @@ $mc.Dispose()
     public void Clear()
     {
         CapturedImage = null;
+        LiveVideoFrame = null;
         DecodedText = string.Empty;
-        StatusMessage = "Ready — position QR code in front of camera and click Capture";
+        LiveDecodeNotification = null;
+        StatusMessage = "Ready — start live scan or paste image from clipboard";
         LastScanTime = string.Empty;
     }
 
     private static string Truncate(string str, int maxLen) =>
         str.Length <= maxLen ? str : str[..maxLen] + "…";
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopLiveScanAsync();
+        await _liveCamera.DisposeAsync();
+    }
 }
