@@ -177,7 +177,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             : new SolidColorBrush(Color.FromRgb(185, 28, 28)); // #B91C1C
 
     // Activity Log Topic Filter
-    public ICollectionView FilteredActivityLog { get; }
+    public ObservableCollection<ActivityLogEntryViewModel> FilteredActivityLog { get; } = new();
     private string _selectedLogFilter = "ALL";
     public string SelectedLogFilter
     {
@@ -188,7 +188,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             {
                 _selectedLogFilter = value;
                 OnPropertyChanged();
-                FilteredActivityLog.Refresh();
+                UpdateFilteredActivityLog();
             }
         }
     }
@@ -240,7 +240,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         DeleteTestSetCommand = new RelayCommand(o => _ = DeleteTestSetAsync(o as TestSetButtonViewModel));
         SelectAdapterCommand = new RelayCommand(() => OpenAdapterSelector?.Invoke());
         CaptureCurrentCommand = new RelayCommand(() => OpenCaptureProfile?.Invoke());
-        ClearActivityLogCommand = new RelayCommand(() => ActivityLog.Clear());
+        ClearActivityLogCommand = new RelayCommand(() => { ActivityLog.Clear(); FilteredActivityLog.Clear(); });
         MimicDhcpCommand = new RelayCommand(o => _ = LearnDhcpProfileAsync());
         AddAdditionalIpCommand = new RelayCommand(o => _ = AddAdditionalIpAsync());
         OpenAdapterStatusCommand = new RelayCommand(o => OpenActiveAdapterStatusWindow());
@@ -328,21 +328,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         BuildDate = buildDate.ToString("yyyy-MM-dd HH:mm");
         var ver = typeof(App).Assembly.GetName().Version;
-        string verStr = (ver != null && ver.Major >= 0) ? $"v{ver.Major}.{ver.Minor}.{ver.Build}" : "v0.4.2";
-        AppVersion = verStr;
-        BuildInfo = $"{verStr} · Built {BuildDate}";
+        string verBase = (ver != null && ver.Major >= 0) ? $"v{ver.Major}.{ver.Minor}" : "v1.0";
+        string dateShort = buildDate.ToString("yyyy-MM-dd");
+        AppVersion = $"{verBase} ({dateShort})";
+        BuildInfo = $"{verBase}.{ver?.Build ?? 0} · Built {BuildDate}";
 
         // Filtered activity log with category topic filtering
-        FilteredActivityLog = CollectionViewSource.GetDefaultView(ActivityLog);
-        FilteredActivityLog.Filter = o =>
-        {
-            if (string.IsNullOrEmpty(_selectedLogFilter) || _selectedLogFilter == "ALL") return true;
-            if (o is ActivityLogEntryViewModel entry)
-            {
-                return string.Equals(entry.Category, _selectedLogFilter, StringComparison.OrdinalIgnoreCase);
-            }
-            return true;
-        };
+        UpdateFilteredActivityLog();
 
         SetLogFilterCommand = new RelayCommand(o =>
         {
@@ -1049,14 +1041,57 @@ if ($wifi) {
     public ObservableCollection<ActivityLogEntryViewModel> ActivityLog { get; } = new();
     public ICommand ClearActivityLogCommand { get; }
 
+    private bool MatchesLogFilter(ActivityLogEntryViewModel entry, string filter)
+    {
+        if (string.IsNullOrEmpty(filter) || string.Equals(filter, "ALL", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (string.Equals(filter, "WIFI", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Equals(entry.Category, "WIFI", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(entry.Category, "WLAN", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (string.Equals(filter, "SPEED", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Equals(entry.Category, "SPEED", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(entry.Category, "DOWNLOAD", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(entry.Category, "UPLOAD", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return string.Equals(entry.Category, filter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void UpdateFilteredActivityLog()
+    {
+        FilteredActivityLog.Clear();
+        foreach (var entry in ActivityLog)
+        {
+            if (MatchesLogFilter(entry, SelectedLogFilter))
+            {
+                FilteredActivityLog.Add(entry);
+            }
+        }
+    }
+
     public void AddActivityLog(string category, string message)
     {
         _dispatcher.BeginInvoke(() =>
         {
-            ActivityLog.Insert(0, new ActivityLogEntryViewModel(category, message));
+            var entry = new ActivityLogEntryViewModel(category, message);
+            ActivityLog.Insert(0, entry);
             while (ActivityLog.Count > 200)
             {
                 ActivityLog.RemoveAt(ActivityLog.Count - 1);
+            }
+
+            if (MatchesLogFilter(entry, SelectedLogFilter))
+            {
+                FilteredActivityLog.Insert(0, entry);
+                while (FilteredActivityLog.Count > 200)
+                {
+                    FilteredActivityLog.RemoveAt(FilteredActivityLog.Count - 1);
+                }
             }
         });
     }

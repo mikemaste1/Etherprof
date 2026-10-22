@@ -9,10 +9,12 @@ public static class StorageConstants
     public static string ProfilesFile => Path.Combine(BasePath, "profiles.json");
     public static string TestsFile => Path.Combine(BasePath, "tests.json");
     public static string WifiBssidsFile => Path.Combine(BasePath, "wifi-bssids.json");
+    public static string WifiHistoryFile => Path.Combine(BasePath, "wifi-history.json");
     public static string LogsDirectory => Path.Combine(BasePath, "logs");
 
     public const int CurrentSettingsSchemaVersion = 1;
     public const int CurrentProfilesSchemaVersion = 1;
     public const int CurrentTestsSchemaVersion = 1;
     public const int CurrentWifiBssidsSchemaVersion = 1;
+    public const int CurrentWifiHistorySchemaVersion = 1;
 }

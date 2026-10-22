@@ -24,7 +24,7 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($Version)) {
-    $Version = "0.4.2"
+    $Version = "1.0.0"
 }
 
 Write-Host "[1/5] Target Version: $Version" -ForegroundColor Green

@@ -51,7 +51,8 @@ public partial class App : Application
             // Wi-Fi Services (v0.2)
             var bssidRepo = new JsonWifiBssidRepository(loggerFactory.CreateLogger<JsonWifiBssidRepository>());
             var wifiMonitor = new Etherprof.Wifi.Windows.NativeWifiMonitor(loggerFactory.CreateLogger<Etherprof.Wifi.Windows.NativeWifiMonitor>());
-            var wifiPanelVm = new WifiPanelViewModel(wifiMonitor, bssidRepo, loggerFactory.CreateLogger<WifiPanelViewModel>());
+            var wifiHistoryRepo = new JsonWifiHistoryRepository(loggerFactory.CreateLogger<JsonWifiHistoryRepository>());
+            var wifiPanelVm = new WifiPanelViewModel(wifiMonitor, bssidRepo, wifiHistoryRepo, loggerFactory.CreateLogger<WifiPanelViewModel>());
 
             // Speedtest Services (v0.3)
             var speedTestProvider = new Etherprof.SpeedTest.CloudflareSpeedTestProvider(loggerFactory.CreateLogger<Etherprof.SpeedTest.CloudflareSpeedTestProvider>());

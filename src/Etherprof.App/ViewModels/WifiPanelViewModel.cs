@@ -1,8 +1,14 @@
 namespace Etherprof.App.ViewModels;
 
+using System;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Etherprof.Contracts.Interfaces;
 using Etherprof.Contracts.Models;
@@ -13,15 +19,19 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
 {
     private readonly IWifiMonitor _wifiMonitor;
     private readonly IWifiBssidRepository _bssidRepo;
+    private readonly IWifiHistoryRepository? _historyRepo;
     private readonly BoundedWifiEventLog _eventLog = new();
     private readonly ILogger<WifiPanelViewModel> _logger;
     private readonly Dispatcher _dispatcher;
 
     private readonly ConcurrentDictionary<string, WifiBssidRecord> _bssidCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, WifiNetworkHistoryRecord> _historyRecords = new(StringComparer.OrdinalIgnoreCase);
 
     private WifiConnectionState? _state;
     private bool _isWifiAdapter;
     private string _activeAdapterId = "";
+    private string? _currentObservedSsid;
+    private string? _selectedHistorySsid;
 
     public Action<string, string?>? OpenAliasEditor { get; set; }
 
@@ -41,6 +51,8 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
             OnPropertyChanged(nameof(IsConnected));
             OnPropertyChanged(nameof(Availability));
             OnPropertyChanged(nameof(Ssid));
+            OnPropertyChanged(nameof(DisplaySsid));
+            OnPropertyChanged(nameof(IsViewingHistoryNetwork));
             OnPropertyChanged(nameof(Bssid));
             OnPropertyChanged(nameof(CurrentBssidAlias));
             OnPropertyChanged(nameof(CurrentBssidDisplayName));
@@ -52,6 +64,8 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
             OnPropertyChanged(nameof(StatusMessage));
             OnPropertyChanged(nameof(IsPermissionDenied));
             OnPropertyChanged(nameof(IsNotWifiAdapter));
+            OnPropertyChanged(nameof(HasActiveOrSelectedNetwork));
+            OnPropertyChanged(nameof(CanShowLiveBssidAndSignal));
         }
     }
 
@@ -61,6 +75,10 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
     public bool IsNotWifiAdapter => !IsWifiAdapter;
 
     public string Ssid => State?.Ssid ?? "";
+    public string DisplaySsid => !string.IsNullOrEmpty(_selectedHistorySsid) ? _selectedHistorySsid : Ssid;
+    public bool IsViewingHistoryNetwork => !string.IsNullOrEmpty(_selectedHistorySsid) && !string.Equals(_selectedHistorySsid, Ssid, StringComparison.OrdinalIgnoreCase);
+    public bool HasActiveOrSelectedNetwork => IsConnected || !string.IsNullOrEmpty(_selectedHistorySsid);
+    public bool CanShowLiveBssidAndSignal => IsConnected && !IsViewingHistoryNetwork;
     public string Bssid => State?.Bssid ?? "";
 
     public string? CurrentBssidAlias => GetAlias(Bssid);
@@ -123,6 +141,8 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
     }
 
     public ObservableCollection<WifiEventViewModel> WifiEvents { get; } = new();
+    public ObservableCollection<WifiHistoryItemViewModel> WifiHistory { get; } = new();
+    public bool HasWifiHistory => WifiHistory.Count > 0;
 
     public Action<string, string>? LogAction { get; set; }
 
@@ -132,6 +152,8 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
     public ICommand CopyBssidCommand { get; }
     public ICommand ExtractOrToggleKeyCommand { get; }
     public ICommand CopyKeyCommand { get; }
+    public ICommand ToggleQrCodeCommand { get; }
+    public ICommand ResetToActiveSsidCommand { get; }
 
     private string? _wifiKey;
     public string? WifiKey
@@ -184,9 +206,7 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
     }
 
     public bool HasKeyStatusMessage => !string.IsNullOrEmpty(KeyStatusMessage);
-
     public bool HasKey => !string.IsNullOrEmpty(WifiKey);
-
     public string KeyVisibilityIcon => IsKeyRevealed ? "🙈 Hide" : "👁 Reveal";
 
     public string DisplayKeyText
@@ -205,13 +225,40 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
         }
     }
 
+    private BitmapSource? _wifiQrCodeImage;
+    public BitmapSource? WifiQrCodeImage
+    {
+        get => _wifiQrCodeImage;
+        private set
+        {
+            _wifiQrCodeImage = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasQrCode));
+        }
+    }
+
+    public bool HasQrCode => WifiQrCodeImage != null;
+
+    private bool _isQrCodeVisible;
+    public bool IsQrCodeVisible
+    {
+        get => _isQrCodeVisible;
+        set
+        {
+            _isQrCodeVisible = value;
+            OnPropertyChanged();
+        }
+    }
+
     public WifiPanelViewModel(
         IWifiMonitor wifiMonitor,
         IWifiBssidRepository bssidRepo,
+        IWifiHistoryRepository? historyRepo,
         ILogger<WifiPanelViewModel> logger)
     {
         _wifiMonitor = wifiMonitor;
         _bssidRepo = bssidRepo;
+        _historyRepo = historyRepo;
         _logger = logger;
         _dispatcher = Dispatcher.CurrentDispatcher;
 
@@ -220,12 +267,13 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
 
         CopySsidCommand = new RelayCommand(_ =>
         {
-            if (!string.IsNullOrEmpty(Ssid))
+            string textToCopy = DisplaySsid;
+            if (!string.IsNullOrEmpty(textToCopy))
             {
                 try
                 {
-                    System.Windows.Clipboard.SetText(Ssid);
-                    LogAction?.Invoke("WIFI", $"Copied SSID to clipboard: {Ssid}");
+                    System.Windows.Clipboard.SetText(textToCopy);
+                    LogAction?.Invoke("WIFI", $"Copied SSID to clipboard: {textToCopy}");
                 }
                 catch { }
             }
@@ -253,6 +301,59 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
             else
             {
                 IsKeyRevealed = !IsKeyRevealed;
+                if (IsKeyRevealed)
+                {
+                    UpdateQrCode();
+                }
+                else
+                {
+                    IsQrCodeVisible = false;
+                }
+            }
+        });
+
+        ToggleQrCodeCommand = new RelayCommand(_ =>
+        {
+            if (!IsQrCodeVisible)
+            {
+                if (string.IsNullOrEmpty(WifiKey))
+                {
+                    _ = ExtractWifiKeyAsync();
+                }
+                else
+                {
+                    IsKeyRevealed = true;
+                    UpdateQrCode();
+                }
+            }
+            else
+            {
+                IsQrCodeVisible = false;
+            }
+        });
+
+        ResetToActiveSsidCommand = new RelayCommand(_ =>
+        {
+            _selectedHistorySsid = null;
+            OnPropertyChanged(nameof(DisplaySsid));
+            OnPropertyChanged(nameof(IsViewingHistoryNetwork));
+            OnPropertyChanged(nameof(HasActiveOrSelectedNetwork));
+            OnPropertyChanged(nameof(CanShowLiveBssidAndSignal));
+
+            foreach (var item in WifiHistory)
+            {
+                item.IsCurrent = string.Equals(item.Ssid, Ssid, StringComparison.OrdinalIgnoreCase);
+            }
+
+            WifiKey = null;
+            IsKeyRevealed = false;
+            IsQrCodeVisible = false;
+            WifiQrCodeImage = null;
+            KeyStatusMessage = null;
+
+            if (!string.IsNullOrEmpty(Ssid))
+            {
+                _ = ExtractWifiKeyAsync(Ssid);
             }
         });
 
@@ -264,7 +365,7 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
                 {
                     System.Windows.Clipboard.SetText(WifiKey);
                     KeyStatusMessage = "Copied!";
-                    LogAction?.Invoke("WIFI", $"Copied Wi-Fi key for '{Ssid}' to clipboard.");
+                    LogAction?.Invoke("WIFI", $"Copied Wi-Fi key for '{DisplaySsid}' to clipboard.");
                 }
                 catch { }
             }
@@ -294,11 +395,59 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
         _wifiMonitor.ConnectionEvent += OnWifiConnectionEvent;
     }
 
-    public async Task ExtractWifiKeyAsync()
+    public WifiPanelViewModel(
+        IWifiMonitor wifiMonitor,
+        IWifiBssidRepository bssidRepo,
+        ILogger<WifiPanelViewModel> logger)
+        : this(wifiMonitor, bssidRepo, null, logger)
     {
-        if (string.IsNullOrWhiteSpace(Ssid))
+    }
+
+    public void SelectHistorySsid(string ssid)
+    {
+        if (string.IsNullOrWhiteSpace(ssid)) return;
+
+        _selectedHistorySsid = ssid.Trim();
+        OnPropertyChanged(nameof(DisplaySsid));
+        OnPropertyChanged(nameof(IsViewingHistoryNetwork));
+        OnPropertyChanged(nameof(HasActiveOrSelectedNetwork));
+        OnPropertyChanged(nameof(CanShowLiveBssidAndSignal));
+
+        foreach (var item in WifiHistory)
         {
-            KeyStatusMessage = "Not connected to Wi-Fi.";
+            item.IsCurrent = string.Equals(item.Ssid, _selectedHistorySsid, StringComparison.OrdinalIgnoreCase);
+        }
+
+        WifiKey = null;
+        IsKeyRevealed = false;
+        IsQrCodeVisible = false;
+        WifiQrCodeImage = null;
+        KeyStatusMessage = null;
+
+        _ = ExtractWifiKeyAsync(_selectedHistorySsid);
+    }
+
+    public void UpdateQrCode()
+    {
+        if (IsKeyRevealed && !string.IsNullOrWhiteSpace(DisplaySsid) && !string.IsNullOrWhiteSpace(WifiKey))
+        {
+            string qrText = WifiQrFormatter.Format(DisplaySsid, WifiKey);
+            WifiQrCodeImage = QrCodeImageHelper.CreateQrCodeBitmap(qrText, scale: 6, margin: 3);
+            IsQrCodeVisible = WifiQrCodeImage != null;
+        }
+        else
+        {
+            IsQrCodeVisible = false;
+        }
+    }
+
+    public async Task ExtractWifiKeyAsync(string? targetSsid = null)
+    {
+        string currentTarget = !string.IsNullOrWhiteSpace(targetSsid) ? targetSsid.Trim() : DisplaySsid;
+
+        if (string.IsNullOrWhiteSpace(currentTarget))
+        {
+            KeyStatusMessage = "No Wi-Fi network selected.";
             return;
         }
 
@@ -308,12 +457,11 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
             KeyStatusMessage = "Reading key...";
             OnPropertyChanged(nameof(DisplayKeyText));
 
-            string? currentSsid = Ssid;
             string? key = await Task.Run(() =>
             {
                 try
                 {
-                    var psi = new System.Diagnostics.ProcessStartInfo("netsh", $"wlan show profile name=\"{currentSsid}\" key=clear")
+                    var psi = new System.Diagnostics.ProcessStartInfo("netsh", $"wlan show profile name=\"{currentTarget}\" key=clear")
                     {
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
@@ -341,17 +489,21 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
                 WifiKey = key;
                 IsKeyRevealed = true;
                 KeyStatusMessage = key.StartsWith("(") ? null : "Key revealed";
-                LogAction?.Invoke("WIFI", $"Extracted Wi-Fi key for network '{currentSsid}'.");
+                LogAction?.Invoke("WIFI", $"Extracted Wi-Fi key for network '{currentTarget}'.");
+
+                UpdateQrCode();
             }
             else
             {
                 WifiKey = null;
                 KeyStatusMessage = "Key not found.";
+                WifiQrCodeImage = null;
+                IsQrCodeVisible = false;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to extract Wi-Fi key for SSID '{Ssid}'", Ssid);
+            _logger.LogWarning(ex, "Failed to extract Wi-Fi key for SSID '{Ssid}'", currentTarget);
             KeyStatusMessage = "Error reading key";
         }
         finally
@@ -379,11 +531,43 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
         {
             _logger.LogError(ex, "Error initializing BSSID cache");
         }
+
+        if (_historyRepo != null)
+        {
+            try
+            {
+                var history = await _historyRepo.LoadAsync();
+                _historyRecords.Clear();
+                foreach (var rec in history)
+                {
+                    if (!string.IsNullOrWhiteSpace(rec.Ssid))
+                    {
+                        _historyRecords[rec.Ssid] = rec;
+                    }
+                }
+                SyncWifiHistoryCollection();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error initializing Wi-Fi history");
+            }
+        }
     }
 
     public async Task UpdateSelectedAdapterAsync(string adapterId)
     {
         _activeAdapterId = adapterId;
+        WifiKey = null;
+        IsKeyRevealed = false;
+        IsQrCodeVisible = false;
+        WifiQrCodeImage = null;
+        KeyStatusMessage = null;
+        _currentObservedSsid = null;
+        _selectedHistorySsid = null;
+        OnPropertyChanged(nameof(DisplaySsid));
+        OnPropertyChanged(nameof(IsViewingHistoryNetwork));
+        OnPropertyChanged(nameof(HasActiveOrSelectedNetwork));
+        OnPropertyChanged(nameof(CanShowLiveBssidAndSignal));
 
         if (string.IsNullOrEmpty(adapterId))
         {
@@ -430,7 +614,6 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
         OnPropertyChanged(nameof(CurrentBssidDisplayName));
         OnPropertyChanged(nameof(HasAlias));
 
-        // Propagate alias change instantly to all displayed RAM event log rows (Requirement 43)
         foreach (var evVm in WifiEvents)
         {
             evVm.NotifyAliasChanged();
@@ -474,13 +657,72 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
         _dispatcher.BeginInvoke(() =>
         {
             IsWifiAdapter = e.State.Availability != WifiMonitorAvailability.NotWifiAdapter;
+
+            if (!e.State.IsConnected || !string.Equals(e.State.Ssid, _currentObservedSsid, StringComparison.Ordinal))
+            {
+                _currentObservedSsid = e.State.IsConnected ? e.State.Ssid : null;
+                if (string.IsNullOrEmpty(_selectedHistorySsid))
+                {
+                    WifiKey = null;
+                    IsKeyRevealed = false;
+                    IsQrCodeVisible = false;
+                    WifiQrCodeImage = null;
+                    KeyStatusMessage = null;
+                }
+            }
+
             State = e.State;
 
-            // Automatic BSSID registration (Requirement 14)
+            if (e.State.IsConnected && !string.IsNullOrEmpty(e.State.Ssid))
+            {
+                RecordNetworkConnection(e.State.Ssid);
+            }
+
+            // Automatic BSSID registration
             if (e.State.IsConnected && !string.IsNullOrEmpty(e.State.Bssid))
             {
                 RegisterBssidIfUnseen(e.State.Bssid);
             }
+        });
+    }
+
+    private void RecordNetworkConnection(string ssid)
+    {
+        if (string.IsNullOrWhiteSpace(ssid)) return;
+
+        var rec = _historyRecords.AddOrUpdate(
+            ssid,
+            s => new WifiNetworkHistoryRecord { Ssid = s, LastConnected = DateTimeOffset.UtcNow },
+            (s, existing) => { existing.LastConnected = DateTimeOffset.UtcNow; return existing; });
+
+        if (_historyRepo != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _historyRepo.SaveAsync(_historyRecords.Values.ToList());
+                }
+                catch { }
+            });
+        }
+
+        SyncWifiHistoryCollection();
+    }
+
+    private void SyncWifiHistoryCollection()
+    {
+        _dispatcher.BeginInvoke(() =>
+        {
+            var ordered = _historyRecords.Values.OrderByDescending(r => r.LastConnected).ToList();
+            WifiHistory.Clear();
+            foreach (var rec in ordered)
+            {
+                bool isCurrent = string.Equals(rec.Ssid, DisplaySsid, StringComparison.OrdinalIgnoreCase);
+                var item = new WifiHistoryItemViewModel(rec.Ssid, rec.LastConnected, isCurrent, SelectHistorySsid, LogAction);
+                WifiHistory.Add(item);
+            }
+            OnPropertyChanged(nameof(HasWifiHistory));
         });
     }
 
@@ -517,7 +759,6 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
         var vm = new WifiEventViewModel(wifiEvent, GetAlias);
         WifiEvents.Insert(0, vm); // Newest first
 
-        // Keep maximum 100 entries in ObservableCollection UI
         while (WifiEvents.Count > BoundedWifiEventLog.Capacity)
         {
             WifiEvents.RemoveAt(WifiEvents.Count - 1);
