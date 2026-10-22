@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -280,12 +281,72 @@ public sealed class WifiProfilesPanelViewModel : INotifyPropertyChangedHelper
                         _records[rec.Ssid] = rec;
                     }
                 }
-                FilterProfiles();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed loading Wi-Fi profiles");
             }
+        }
+
+        await LoadSystemProfilesAsync();
+        FilterProfiles();
+    }
+
+    private async Task LoadSystemProfilesAsync()
+    {
+        try
+        {
+            var profiles = await Task.Run(() =>
+            {
+                var list = new List<string>();
+                try
+                {
+                    var psi = new ProcessStartInfo("netsh", "wlan show profiles")
+                    {
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+                    using var proc = Process.Start(psi);
+                    if (proc == null) return list;
+                    string output = proc.StandardOutput.ReadToEnd();
+                    proc.WaitForExit(3000);
+
+                    using var reader = new StringReader(output);
+                    string? line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        int colonIndex = line.IndexOf(':');
+                        if (colonIndex > 0 && (line.Contains("Profile", StringComparison.OrdinalIgnoreCase) || line.Contains("профиль", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            string ssid = line.Substring(colonIndex + 1).Trim();
+                            if (!string.IsNullOrEmpty(ssid) && !ssid.StartsWith("<"))
+                            {
+                                list.Add(ssid);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed running netsh wlan show profiles");
+                }
+                return list;
+            });
+
+            foreach (var ssid in profiles)
+            {
+                _records.TryAdd(ssid, new WifiNetworkHistoryRecord
+                {
+                    Ssid = ssid,
+                    LastConnected = DateTimeOffset.MinValue
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed loading system Wi-Fi profiles");
         }
     }
 
@@ -369,16 +430,19 @@ public sealed class WifiProfilesPanelViewModel : INotifyPropertyChangedHelper
 
     private void UpdateQrCode()
     {
-        if (IsKeyRevealed && !string.IsNullOrWhiteSpace(SelectedSsid) && !string.IsNullOrWhiteSpace(WifiKey))
+        _dispatcher.BeginInvoke(() =>
         {
-            string qrText = WifiQrFormatter.Format(SelectedSsid, WifiKey);
-            WifiQrCodeImage = QrCodeImageHelper.CreateQrCodeBitmap(qrText, scale: 6, margin: 3);
-            IsQrCodeVisible = WifiQrCodeImage != null;
-        }
-        else
-        {
-            IsQrCodeVisible = false;
-        }
+            if (IsKeyRevealed && !string.IsNullOrWhiteSpace(SelectedSsid) && !string.IsNullOrWhiteSpace(WifiKey))
+            {
+                string qrText = WifiQrFormatter.Format(SelectedSsid, WifiKey);
+                WifiQrCodeImage = QrCodeImageHelper.CreateQrCodeBitmap(qrText, scale: 6, margin: 3);
+                IsQrCodeVisible = WifiQrCodeImage != null;
+            }
+            else
+            {
+                IsQrCodeVisible = false;
+            }
+        });
     }
 
     public async Task ExtractWifiKeyAsync(string ssid)

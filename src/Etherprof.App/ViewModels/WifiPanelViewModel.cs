@@ -429,16 +429,19 @@ public sealed class WifiPanelViewModel : INotifyPropertyChangedHelper
 
     public void UpdateQrCode()
     {
-        if (IsKeyRevealed && !string.IsNullOrWhiteSpace(DisplaySsid) && !string.IsNullOrWhiteSpace(WifiKey))
+        _dispatcher.BeginInvoke(() =>
         {
-            string qrText = WifiQrFormatter.Format(DisplaySsid, WifiKey);
-            WifiQrCodeImage = QrCodeImageHelper.CreateQrCodeBitmap(qrText, scale: 6, margin: 3);
-            IsQrCodeVisible = WifiQrCodeImage != null;
-        }
-        else
-        {
-            IsQrCodeVisible = false;
-        }
+            if (IsKeyRevealed && !string.IsNullOrWhiteSpace(DisplaySsid) && !string.IsNullOrWhiteSpace(WifiKey))
+            {
+                string qrText = WifiQrFormatter.Format(DisplaySsid, WifiKey);
+                WifiQrCodeImage = QrCodeImageHelper.CreateQrCodeBitmap(qrText, scale: 6, margin: 3);
+                IsQrCodeVisible = WifiQrCodeImage != null;
+            }
+            else
+            {
+                IsQrCodeVisible = false;
+            }
+        });
     }
 
     public async Task ExtractWifiKeyAsync(string? targetSsid = null)

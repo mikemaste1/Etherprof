@@ -9,6 +9,14 @@ using Xunit;
 public class MainWindowXamlTests
 {
     [Fact]
+    public void CreateQrCodeBitmap_OnBackgroundThread_DoesNotThrowAndReturnsBitmap()
+    {
+        string wifiQr = Etherprof.Core.WifiQrFormatter.Format("TestSSID", "Password123");
+        var bmp = Etherprof.App.QrCodeImageHelper.CreateQrCodeBitmap(wifiQr);
+        Assert.NotNull(bmp);
+        Assert.True(bmp.Width > 0);
+    }
+    [Fact]
     public void MainWindow_InstantiatesWithoutXamlException()
     {
         Exception? caughtException = null;
@@ -25,6 +33,17 @@ public class MainWindowXamlTests
 
                 var window = new MainWindow();
                 Assert.NotNull(window);
+
+                // Verify wifiProfilesExpander exists in visual tree
+                var profilesExpander = window.FindName("wifiProfilesExpander");
+                Assert.NotNull(profilesExpander);
+
+                // Test QR code creation
+                string wifiQr = Etherprof.Core.WifiQrFormatter.Format("TestSSID", "Password123");
+                var bmp = Etherprof.App.QrCodeImageHelper.CreateQrCodeBitmap(wifiQr);
+                Assert.NotNull(bmp);
+                Assert.True(bmp.Width > 0);
+                Assert.True(bmp.Height > 0);
             }
             catch (Exception ex)
             {

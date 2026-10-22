@@ -217,6 +217,7 @@ public partial class MainWindow : Window
     {
         _sections["QuickIp"] = quickIpExpander;
         _sections["Wifi"] = wifiExpander;
+        _sections["WifiProfiles"] = wifiProfilesExpander;
         _sections["SpeedTest"] = speedTestExpander;
         _sections["StreamClient"] = streamClientExpander;
         _sections["StreamServer"] = streamServerExpander;
@@ -256,6 +257,7 @@ public partial class MainWindow : Window
     {
         "QuickIp" => vm.QuickIpVisible,
         "Wifi" => vm.WifiVisible,
+        "WifiProfiles" => vm.WifiProfilesVisible,
         "SpeedTest" => vm.SpeedTestVisible,
         "StreamClient" => vm.StreamClientVisible,
         "StreamServer" => vm.StreamServerVisible,

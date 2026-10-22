@@ -500,6 +500,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 _quickIpVisible = value;
                 OnPropertyChanged();
                 UpdateSectionVisibility("QuickIp", value);
+                FindSectionItem("QuickIp")?.SetVisibleSilently(value);
             }
         }
     }
@@ -594,6 +595,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 _speedTestVisible = value;
                 OnPropertyChanged();
                 UpdateSectionVisibility("SpeedTest", value);
+                FindSectionItem("SpeedTest")?.SetVisibleSilently(value);
             }
         }
     }
@@ -609,6 +611,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 _streamClientVisible = value;
                 OnPropertyChanged();
                 UpdateSectionVisibility("StreamClient", value);
+                FindSectionItem("StreamClient")?.SetVisibleSilently(value);
             }
         }
     }
@@ -624,6 +627,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 _streamServerVisible = value;
                 OnPropertyChanged();
                 UpdateSectionVisibility("StreamServer", value);
+                FindSectionItem("StreamServer")?.SetVisibleSilently(value);
             }
         }
     }
@@ -639,6 +643,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 _activityLogVisible = value;
                 OnPropertyChanged();
                 UpdateSectionVisibility("ActivityLog", value);
+                FindSectionItem("ActivityLog")?.SetVisibleSilently(value);
             }
         }
     }
@@ -654,6 +659,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 _testResultsSectionVisible = value;
                 OnPropertyChanged();
                 UpdateSectionVisibility("TestResults", value);
+                FindSectionItem("TestResults")?.SetVisibleSilently(value);
             }
         }
     }

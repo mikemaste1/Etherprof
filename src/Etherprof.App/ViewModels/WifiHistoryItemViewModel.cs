@@ -23,7 +23,9 @@ public sealed class WifiHistoryItemViewModel : INotifyPropertyChangedHelper
         }
     }
 
-    public string LastConnectedText => LastConnected.ToString("yyyy-MM-dd HH:mm");
+    public string LastConnectedText => LastConnected > DateTimeOffset.MinValue
+        ? LastConnected.ToString("yyyy-MM-dd HH:mm")
+        : "Windows Profile";
 
     private bool _isCurrent;
     public bool IsCurrent
