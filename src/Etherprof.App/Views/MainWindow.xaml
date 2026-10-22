@@ -55,6 +55,21 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="SectionsMenuToggleButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource SectionToggleButtonStyle}">
+            <Setter Property="Background" Value="#F8FAFC" />
+            <Setter Property="Foreground" Value="#334155" />
+            <Setter Property="BorderBrush" Value="#CBD5E1" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="8,2" />
+            <Style.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Background" Value="#E2E8F0" />
+                    <Setter Property="Foreground" Value="#0F172A" />
+                    <Setter Property="BorderBrush" Value="#94A3B8" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- Specific Section Toggle Styles (color coded for immediate visual navigation) -->
         <Style x:Key="IpToggleButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource SectionToggleButtonStyle}">
             <Setter Property="Background" Value="#E0F2FE" />
@@ -305,7 +320,7 @@
                     <DockPanel>
                         <!-- Left: Consolidated Sections Manager Button with Popup -->
                         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
-                            <ToggleButton x:Name="sectionsMenuButton" Style="{StaticResource ActionButton}"
+                            <ToggleButton x:Name="sectionsMenuButton" Style="{StaticResource SectionsMenuToggleButtonStyle}"
                                           Padding="6,2" FontSize="10" FontWeight="SemiBold" Height="24" Margin="0,0,8,0"
                                           ToolTip="Configure visible and starred sections">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">

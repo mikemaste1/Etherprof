@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
@@ -13,5 +14,6 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
     <ProjectReference Include="..\..\src\Etherprof.StreamTest\Etherprof.StreamTest.csproj" />
     <ProjectReference Include="..\..\src\Etherprof.Contracts\Etherprof.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Etherprof.App\Etherprof.App.csproj" />
   </ItemGroup>
 </Project>
