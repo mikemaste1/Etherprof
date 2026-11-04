@@ -2,7 +2,7 @@
 ; Compatible with Inno Setup 6.x
 
 #ifndef MyAppVersion
-#define MyAppVersion "0.4.2"
+#define MyAppVersion "1.0.0"
 #endif
 
 #define MyAppName "Etherprof"

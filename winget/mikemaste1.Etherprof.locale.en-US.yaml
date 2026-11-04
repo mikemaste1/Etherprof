@@ -1,7 +1,7 @@
-﻿# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+﻿# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.28.0.schema.json
 
 PackageIdentifier: mikemaste1.Etherprof
-PackageVersion: 0.4.2
+PackageVersion: 1.0.0
 PackageLocale: en-US
 Publisher: mikemaste1
 PublisherUrl: https://github.com/mikemaste1
@@ -21,4 +21,4 @@ Tags:
   - diagnostics
   - traceroute
 ManifestType: defaultLocale
-ManifestVersion: 1.6.0
+ManifestVersion: 1.28.0

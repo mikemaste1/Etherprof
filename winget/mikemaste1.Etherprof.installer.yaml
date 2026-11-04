@@ -1,7 +1,7 @@
-# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+﻿# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.28.0.schema.json
 
 PackageIdentifier: mikemaste1.Etherprof
-PackageVersion: 0.4.2
+PackageVersion: 1.0.0
 InstallerType: inno
 Scope: machine
 InstallModes:
@@ -19,7 +19,7 @@ AppsAndFeaturesEntries:
     ProductCode: '{E74E8F01-B2C1-4D5F-8A9D-56D25494C201}_is1'
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/mikemaste1/Etherprof/releases/download/v0.4.2/Etherprof-Setup-0.4.2.exe
-    InstallerSha256: 5FF4DFC493368299D44B3888BD609B3B1349B17BAAC28F8A814A9AADBE51207B
+    InstallerUrl: https://github.com/mikemaste1/Etherprof/releases/download/v1.0.0/Etherprof-Setup-1.0.0.exe
+    InstallerSha256: 222393109CC14532E874B1D8532BC5B3B3D252196548591212646B2F1298AA1B
 ManifestType: installer
-ManifestVersion: 1.6.0
+ManifestVersion: 1.28.0

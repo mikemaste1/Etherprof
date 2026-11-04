@@ -57,17 +57,17 @@ if (Test-Path $targetDir) { Remove-Item -Path $targetDir -Recurse -Force }
 New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
 
 $versionYaml = @"
-# yaml-language-server: `$schema=https://aka.ms/winget-manifest.version.1.6.0.schema.json
+# yaml-language-server: `$schema=https://aka.ms/winget-manifest.version.1.28.0.schema.json
 
 PackageIdentifier: mikemaste1.Etherprof
 PackageVersion: $Version
 DefaultLocale: en-US
 ManifestType: version
-ManifestVersion: 1.6.0
+ManifestVersion: 1.28.0
 "@
 
 $installerYaml = @"
-# yaml-language-server: `$schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+# yaml-language-server: `$schema=https://aka.ms/winget-manifest.installer.1.28.0.schema.json
 
 PackageIdentifier: mikemaste1.Etherprof
 PackageVersion: $Version
@@ -91,11 +91,11 @@ Installers:
     InstallerUrl: $InstallerUrl
     InstallerSha256: $sha256
 ManifestType: installer
-ManifestVersion: 1.6.0
+ManifestVersion: 1.28.0
 "@
 
 $localeYaml = @"
-# yaml-language-server: `$schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+# yaml-language-server: `$schema=https://aka.ms/winget-manifest.defaultLocale.1.28.0.schema.json
 
 PackageIdentifier: mikemaste1.Etherprof
 PackageVersion: $Version
@@ -118,7 +118,7 @@ Tags:
   - diagnostics
   - traceroute
 ManifestType: defaultLocale
-ManifestVersion: 1.6.0
+ManifestVersion: 1.28.0
 "@
 
 Set-Content -Path (Join-Path $targetDir "mikemaste1.Etherprof.yaml") -Value $versionYaml -Encoding utf8
