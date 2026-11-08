@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     }
 
     private MiniHudWindow? _hudWindow;
+    private NetworkLoadHudWindow? _netLoadHudWindow;
     private LiveQrScannerWindow? _qrLiveWindow;
     private bool _autoShownByMinimize;
 
@@ -36,11 +37,28 @@ public partial class MainWindow : Window
             vm.OpenAliasEditorDialog = (bssid, alias) => ShowAliasEditor(vm, bssid, alias);
             vm.OpenAdHocPingDialog = defaultIp => ShowAdHocPingDialog(vm, defaultIp);
             vm.OpenPingPrefixDialog = proposedPrefix => ShowPingPrefixDialog(vm, proposedPrefix);
+            vm.OpenBrowserDialogAction = host => ShowBrowserDialogForTarget(host);
+            vm.OpenTracerouteDialogAction = host => ShowTracerouteDialogForTarget(host);
 
             // Wire HUD actions
             vm.RequestShowMiniHud = () => ShowMiniHud(vm);
             vm.RequestHideMiniHud = () => HideMiniHud();
             vm.RestoreMainWindow = RestoreFromHud;
+
+            // Wire NetworkLoad HUD show/hide via IsVisible changes
+            vm.NetworkLoadHud.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(Etherprof.App.ViewModels.NetworkLoadViewModel.IsVisible))
+                {
+                    if (vm.NetworkLoadHud.IsVisible) ShowNetworkLoadHud(vm);
+                    else HideNetworkLoadHud();
+                }
+            };
+            // Restore Network Load HUD if it was active
+            if (vm.NetworkLoadHud.IsVisible)
+            {
+                ShowNetworkLoadHud(vm);
+            }
 
             // Wire Detached Live QR Scanner Bar
             vm.QrScanPanel.OpenDetachedBarRequested = () => ShowLiveQrBar(vm);
@@ -245,11 +263,41 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ShowBrowserDialogForTarget(string host)
+    {
+        var dialog = new OpenBrowserDialog(host) { Owner = this };
+        dialog.Show();
+    }
+
+    private void ShowTracerouteDialogForTarget(string host)
+    {
+        var dialog = new TracerouteDialog(host) { Owner = this };
+        dialog.Show();
+    }
+
+    private void ShowNetworkLoadHud(MainViewModel vm)
+    {
+        if (_netLoadHudWindow is null)
+        {
+            _netLoadHudWindow = new NetworkLoadHudWindow(vm.NetworkLoadHud, vm.Settings, vm.SettingsRepo);
+            _netLoadHudWindow.Closed += (s, e) => _netLoadHudWindow = null;
+        }
+        _netLoadHudWindow.Show();
+        _netLoadHudWindow.Topmost = true;
+    }
+
+    private void HideNetworkLoadHud()
+    {
+        _netLoadHudWindow?.Hide();
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         base.OnClosed(e);
         _hudWindow?.Close();
         _hudWindow = null;
+        _netLoadHudWindow?.Close();
+        _netLoadHudWindow = null;
     }
 
     // --- Dynamic Section Ordering & Hide/Show System ---

@@ -71,4 +71,9 @@ public sealed class AppSettings
 
     // Internet Check (Google DNS 8.8.8.8 -> ONLINE / OFFLINE window title)
     public bool InternetCheckEnabled { get; set; } = true;
+
+    // Network Load HUD
+    public bool NetworkLoadHudVisible { get; set; } = false;
+    public double? NetworkLoadHudLeft { get; set; }
+    public double? NetworkLoadHudTop { get; set; }
 }

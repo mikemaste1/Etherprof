@@ -1,0 +1,134 @@
+<Window x:Class="Etherprof.App.Views.NetworkLoadHudWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Etherprof.App.ViewModels"
+        Title="Etherprof Network Load"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        SizeToContent="WidthAndHeight"
+        ResizeMode="NoResize"
+        MouseDown="OnWindowMouseDown">
+
+    <Window.Resources>
+        <Style x:Key="HudIconButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#94A3B8" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="3" Padding="2">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#334155" />
+                                <Setter Property="Foreground" Value="#F8FAFC" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#475569" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!-- Dark floating HUD, matches MiniHudWindow style exactly -->
+    <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1"
+            CornerRadius="8" Padding="10,6,10,6" Margin="6" SnapsToDevicePixels="True">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="12" Direction="270" Opacity="0.5" ShadowDepth="2" Color="#000000" />
+        </Border.Effect>
+
+        <Grid VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- 0: Drag Grip -->
+            <TextBlock Grid.Column="0" Text="⠿" FontSize="13" Foreground="#64748B"
+                       VerticalAlignment="Center" Margin="0,0,8,0" Cursor="SizeAll"
+                       ToolTip="Drag to move. Click ✕ to close." />
+
+            <!-- 1: Network Load Content -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" MinWidth="200">
+
+                <!-- Rate badges row -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <!-- Download badge -->
+                    <Border CornerRadius="4" Padding="6,2" Margin="0,0,6,0" VerticalAlignment="Center"
+                            Background="#1E3A5F">
+                        <TextBlock Text="{Binding DownMbpsText}" FontWeight="Bold" FontSize="11"
+                                   Foreground="#60A5FA" FontFamily="Consolas, Courier New" />
+                    </Border>
+                    <!-- Upload badge -->
+                    <Border CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
+                            Background="#3B1F0E">
+                        <TextBlock Text="{Binding UpMbpsText}" FontWeight="Bold" FontSize="11"
+                                   Foreground="#FB923C" FontFamily="Consolas, Courier New" />
+                    </Border>
+                </StackPanel>
+
+                <!-- Session totals -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <TextBlock Text="{Binding SessionDownMiB}" FontSize="9" Foreground="#94A3B8"
+                               FontFamily="Consolas, Courier New" Margin="0,0,8,0" />
+                    <TextBlock Text="{Binding SessionUpMiB}" FontSize="9" Foreground="#94A3B8"
+                               FontFamily="Consolas, Courier New" />
+                </StackPanel>
+
+                <!-- Sparklines -->
+                <!-- Download sparkline (blue) -->
+                <ItemsControl ItemsSource="{Binding DownTicks}" Margin="0,0,0,2">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Height="24" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:NetworkTickItem}">
+                            <Border Width="4" Height="{Binding BarHeight}" Margin="1,0"
+                                    Background="#2563EB" CornerRadius="1"
+                                    VerticalAlignment="Bottom"
+                                    ToolTip="{Binding ToolTipText}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Upload sparkline (orange) -->
+                <ItemsControl ItemsSource="{Binding UpTicks}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Height="24" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:NetworkTickItem}">
+                            <Border Width="4" Height="{Binding BarHeight}" Margin="1,0"
+                                    Background="#EA580C" CornerRadius="1"
+                                    VerticalAlignment="Bottom"
+                                    ToolTip="{Binding ToolTipText}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+            </StackPanel>
+
+            <!-- 2: Window Buttons -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top" Margin="6,0,0,0">
+                <Button Content="✕" Click="OnCloseClicked" Style="{StaticResource HudIconButton}"
+                        FontSize="10" Width="18" Height="18"
+                        ToolTip="Close Network Load HUD" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

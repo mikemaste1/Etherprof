@@ -312,7 +312,8 @@
                         Margin="0,0,6,0" Padding="8,3" FontSize="11" />
                 <Button Style="{StaticResource ActionButton}" Content="📌 HUD"
                         Command="{Binding ToggleMiniHudCommand}"
-                        ToolTip="Toggle floating always-on-top Mini-HUD for continuous ping visibility"
+                        ToolTip="Toggle floating always-on-top Mini-HUD for continuous ping visibility" Margin="0,0,6,0" Padding="8,3" FontSize="11" />
+                <Button Style="{StaticResource ActionButton}" Content="📈 Net" Command="{Binding ToggleNetworkLoadHudCommand}" ToolTip="Toggle floating always-on-top Network Load HUD (Mbit/s in/out &amp; session total MiB)"
                         Margin="0,0,6,0" Padding="8,3" FontSize="11" />
                 <Button Style="{StaticResource ActionButton}" Content="🗔 ncpa.cpl"
                         Command="{Binding OpenNcpaCommand}"
@@ -652,6 +653,23 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Grid Margin="0,2">
+                                                <Grid.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="🌐 Open in Browser"
+                                                                  Command="{Binding DataContext.PingTargetOpenBrowserCommand, Source={x:Reference mainGrid}}"
+                                                                  CommandParameter="{Binding}" />
+                                                        <MenuItem Header="🛤️ Traceroute"
+                                                                  Command="{Binding DataContext.PingTargetTracerouteCommand, Source={x:Reference mainGrid}}"
+                                                                  CommandParameter="{Binding}" />
+                                                        <MenuItem Header="🎯 Ad-hoc Ping Window"
+                                                                  Command="{Binding DataContext.PingTargetAdHocCommand, Source={x:Reference mainGrid}}"
+                                                                  CommandParameter="{Binding}" />
+                                                        <Separator />
+                                                        <MenuItem Header="✕ Remove"
+                                                                  Command="{Binding DataContext.RemovePingTargetCommand, Source={x:Reference mainGrid}}"
+                                                                  CommandParameter="{Binding}" />
+                                                    </ContextMenu>
+                                                </Grid.ContextMenu>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="85" />
                                                     <ColumnDefinition Width="115" />
@@ -1324,6 +1342,23 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Grid Margin="0,2">
+                                                <Grid.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="🌐 Open in Browser"
+                                                                  Command="{Binding DataContext.PingTargetOpenBrowserCommand, Source={x:Reference mainGrid}}"
+                                                                  CommandParameter="{Binding}" />
+                                                        <MenuItem Header="🛤️ Traceroute"
+                                                                  Command="{Binding DataContext.PingTargetTracerouteCommand, Source={x:Reference mainGrid}}"
+                                                                  CommandParameter="{Binding}" />
+                                                        <MenuItem Header="🎯 Ad-hoc Ping Window"
+                                                                  Command="{Binding DataContext.PingTargetAdHocCommand, Source={x:Reference mainGrid}}"
+                                                                  CommandParameter="{Binding}" />
+                                                        <Separator />
+                                                        <MenuItem Header="✕ Remove"
+                                                                  Command="{Binding DataContext.RemovePingTargetCommand, Source={x:Reference mainGrid}}"
+                                                                  CommandParameter="{Binding}" />
+                                                    </ContextMenu>
+                                                </Grid.ContextMenu>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="105" />
                                                     <ColumnDefinition Width="50" />

@@ -18,6 +18,8 @@ public sealed class TestResultViewModel : INotifyPropertyChanged
 {
     public Guid TargetId { get; init; }
     public string TargetName { get; init; } = "";
+    public string TargetHost { get; init; } = "";
+    public string EffectiveHost => !string.IsNullOrWhiteSpace(TargetHost) ? TargetHost : TargetName;
 
     private TestStatus _status = TestStatus.Untested;
     public TestStatus Status

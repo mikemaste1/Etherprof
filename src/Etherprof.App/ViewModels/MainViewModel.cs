@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -32,6 +32,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public WifiPanelViewModel WifiPanel { get; }
     public WifiProfilesPanelViewModel WifiProfilesPanel { get; }
     public QrScanPanelViewModel QrScanPanel { get; } = new();
+    public NetworkLoadViewModel NetworkLoadHud { get; } = new();
     public SpeedTestPanelViewModel SpeedTestPanel { get; }
     public ObservableCollection<SectionItemViewModel> SectionItems { get; } = new();
 
@@ -58,6 +59,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public Action? RestoreMainWindow { get; set; }
     public Action<string>? OpenAdHocPingDialog { get; set; }
     public Action<string>? OpenPingPrefixDialog { get; set; }
+    // Ping row context menu dialog actions
+    public Action<string>? OpenBrowserDialogAction { get; set; }
+    public Action<string>? OpenTracerouteDialogAction { get; set; }
 
     // Adapter info
     private string _adapterName = "No adapter selected";
@@ -132,6 +136,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public ICommand ToggleAdapterCommand { get; }
     public ICommand ToggleWirelessCommand { get; }
     public ICommand RemovePingTargetCommand { get; }
+    public ICommand PingTargetOpenBrowserCommand { get; }
+    public ICommand PingTargetTracerouteCommand { get; }
+    public ICommand PingTargetAdHocCommand { get; }
+    public ICommand ToggleNetworkLoadHudCommand { get; }
     public ICommand ToggleInternetCheckCommand { get; }
     public string AdapterToggleLabel => (_adapterState?.IsConnected ?? false) ? "Disable" : "Enable";
 
@@ -283,6 +291,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
         ToggleAdapterCommand = new RelayCommand(_ => _ = ToggleAdapterAsync());
         ToggleWirelessCommand = new RelayCommand(_ => _ = ToggleWirelessAsync());
         RemovePingTargetCommand = new RelayCommand(o => RemovePingTarget(o as TestResultViewModel));
+        PingTargetOpenBrowserCommand = new RelayCommand(o => { if (o is TestResultViewModel r) OpenBrowserDialogAction?.Invoke(r.EffectiveHost); });
+        PingTargetTracerouteCommand = new RelayCommand(o => { if (o is TestResultViewModel r) OpenTracerouteDialogAction?.Invoke(r.EffectiveHost); });
+        PingTargetAdHocCommand = new RelayCommand(o => { if (o is TestResultViewModel r) OpenAdHocPingDialog?.Invoke(r.EffectiveHost); });
+        ToggleNetworkLoadHudCommand = new RelayCommand(() => NetworkLoadHud.IsVisible = !NetworkLoadHud.IsVisible);
         ToggleInternetCheckCommand = new RelayCommand(() =>
         {
             InternetCheckEnabled = !InternetCheckEnabled;
@@ -403,6 +415,19 @@ public sealed class MainViewModel : INotifyPropertyChanged
         // Initialize internet check
         _internetCheckEnabled = _settings.InternetCheckEnabled;
         if (_internetCheckEnabled) StartInternetCheck();
+
+        // Initialize network load HUD from persisted settings
+        NetworkLoadHud.IsVisible = _settings.NetworkLoadHudVisible;
+        NetworkLoadHud.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(NetworkLoadViewModel.IsVisible))
+            {
+                _settings.NetworkLoadHudVisible = NetworkLoadHud.IsVisible;
+                _ = _settingsRepo.SaveAsync(_settings);
+            }
+        };
+        // Start the monitor — will begin tracking after first adapter is resolved
+        NetworkLoadHud.Start(_settings.SelectedAdapterId ?? string.Empty);
     }
 
     // --- Expander States (Persisted) ---
@@ -1396,7 +1421,7 @@ if ($wifi) {
             var adapter = adapters.FirstOrDefault(a => a.Id == _adapterState.AdapterId);
             if (adapter is not null)
             {
-                _ = _dispatcher.BeginInvoke(() => AdapterName = adapter.Name);
+                _ = _dispatcher.BeginInvoke(() => { AdapterName = adapter.Name; NetworkLoadHud.UpdateAdapterName(adapter.Name); });
             }
         });
 
@@ -1457,6 +1482,9 @@ if ($wifi) {
         await RefreshAdapterStateAsync();
         await WifiPanel.UpdateSelectedAdapterAsync(adapterId);
         SpeedTestPanel.SetActiveAdapterId(adapterId);
+        // Update network load monitor for new adapter
+        var nicForLoad = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(n => n.Id == adapterId);
+        if (nicForLoad != null) NetworkLoadHud.UpdateAdapterName(nicForLoad.Name);
     }
 
     public async Task SwitchToNextAdapterAsync()
@@ -1914,6 +1942,9 @@ if ($wifi) {
             {
                 TargetId = target.Id,
                 TargetName = target.Name,
+                TargetHost = target.Host,
+
+    
                 Status = TestStatus.Testing
             });
         }
@@ -2085,6 +2116,9 @@ if ($wifi) {
                 {
                     TargetId = target.Id,
                     TargetName = target.Name,
+                TargetHost = target.Host,
+
+    
                     Status = TestStatus.Testing
                 };
                 TestResults.Add(newResult);
@@ -2126,6 +2160,8 @@ if ($wifi) {
         {
             TargetId = target.Id,
             TargetName = target.Name,
+            TargetHost = target.Host,
+
             Status = TestStatus.Testing
         });
         TestResultsVisible = true;
@@ -2200,6 +2236,7 @@ if ($wifi) {
             {
                 TargetId = t.Id,
                 TargetName = t.Name,
+                TargetHost = t.Host,
                 Status = TestStatus.Testing
             });
         }
