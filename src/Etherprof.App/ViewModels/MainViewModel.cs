@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -28,6 +28,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private readonly AppSettings _settings;
     private readonly ILogger<MainViewModel> _logger;
     private readonly Dispatcher _dispatcher;
+    private readonly IPublicIpService _publicIpService;
+    private DateTime _lastPublicIpCheck = DateTime.MinValue;
+    private string _publicIpSummary = "";
+    private string _publicIpOnly = "";
+    private bool _isResolvingPublicIp;
 
     public WifiPanelViewModel WifiPanel { get; }
     public WifiProfilesPanelViewModel WifiProfilesPanel { get; }
@@ -62,6 +67,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     // Ping row context menu dialog actions
     public Action<string>? OpenBrowserDialogAction { get; set; }
     public Action<string>? OpenTracerouteDialogAction { get; set; }
+    public Action<string>? OpenSimilarIpPingDialog { get; set; }
 
     // Adapter info
     private string _adapterName = "No adapter selected";
@@ -139,8 +145,26 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public ICommand PingTargetOpenBrowserCommand { get; }
     public ICommand PingTargetTracerouteCommand { get; }
     public ICommand PingTargetAdHocCommand { get; }
+    public ICommand PingTargetSimilarIpCommand { get; }
     public ICommand ToggleNetworkLoadHudCommand { get; }
     public ICommand ToggleInternetCheckCommand { get; }
+    public ICommand CopyPublicIpCommand { get; }
+    public ICommand RefreshPublicIpCommand { get; }
+    public string PublicIpSummary
+    {
+        get => _publicIpSummary;
+        set
+        {
+            if (_publicIpSummary != value)
+            {
+                _publicIpSummary = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasPublicIpInfo));
+            }
+        }
+    }
+    public bool HasPublicIpInfo => !string.IsNullOrEmpty(_publicIpSummary);
+    public string PublicIpOnly => _publicIpOnly;
     public string AdapterToggleLabel => (_adapterState?.IsConnected ?? false) ? "Disable" : "Enable";
 
     private bool _complementAdHocPing;
@@ -222,7 +246,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         SpeedTestPanelViewModel speedTestPanel,
         StreamPanelViewModel streamPanel,
         StreamServerPanelViewModel streamServerPanel,
-        ILogger<MainViewModel> logger)
+        ILogger<MainViewModel> logger,
+        IPublicIpService? publicIpService = null)
     {
         _adapterProvider = adapterProvider;
         _configService = configService;
@@ -238,6 +263,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         StreamServerPanel = streamServerPanel;
         _logger = logger;
         _dispatcher = Dispatcher.CurrentDispatcher;
+        _publicIpService = publicIpService ?? new PublicIpService();
 
         WifiPanel.OpenAliasEditor = (bssid, alias) => OpenAliasEditorDialog?.Invoke(bssid, alias);
         WifiPanel.LogAction = (cat, msg) => AddActivityLog(cat, msg);
@@ -294,7 +320,18 @@ public sealed class MainViewModel : INotifyPropertyChanged
         PingTargetOpenBrowserCommand = new RelayCommand(o => { if (o is TestResultViewModel r) OpenBrowserDialogAction?.Invoke(r.EffectiveHost); });
         PingTargetTracerouteCommand = new RelayCommand(o => { if (o is TestResultViewModel r) OpenTracerouteDialogAction?.Invoke(r.EffectiveHost); });
         PingTargetAdHocCommand = new RelayCommand(o => { if (o is TestResultViewModel r) OpenAdHocPingDialog?.Invoke(r.EffectiveHost); });
+        PingTargetSimilarIpCommand = new RelayCommand(o => { if (o is TestResultViewModel r) (OpenSimilarIpPingDialog ?? OpenAdHocPingDialog)?.Invoke(r.EffectiveHost); });
         ToggleNetworkLoadHudCommand = new RelayCommand(() => NetworkLoadHud.IsVisible = !NetworkLoadHud.IsVisible);
+        CopyPublicIpCommand = new RelayCommand(_ =>
+        {
+            string toCopy = !string.IsNullOrEmpty(_publicIpOnly) ? _publicIpOnly : _publicIpSummary;
+            if (!string.IsNullOrEmpty(toCopy))
+            {
+                Clipboard.SetText(toCopy);
+                AddActivityLog("IP", $"Copied public IP to clipboard: {toCopy}");
+            }
+        });
+        RefreshPublicIpCommand = new RelayCommand(_ => _ = ResolvePublicIpAsync(force: true));
         ToggleInternetCheckCommand = new RelayCommand(() =>
         {
             InternetCheckEnabled = !InternetCheckEnabled;
@@ -770,6 +807,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 OnPropertyChanged(nameof(WindowTitle));
                 OnPropertyChanged(nameof(InternetStatusText));
                 OnPropertyChanged(nameof(InternetStatusBrush));
+                if (_isOnline)
+                {
+                    _ = ResolvePublicIpAsync();
+                }
             }
         }
     }
@@ -790,7 +831,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
             {
                 using var ping = new System.Net.NetworkInformation.Ping();
                 var reply = await ping.SendPingAsync("8.8.8.8", 2000);
-                _ = _dispatcher.BeginInvoke(() => IsOnline = reply.Status == System.Net.NetworkInformation.IPStatus.Success);
+                bool online = reply.Status == System.Net.NetworkInformation.IPStatus.Success;
+                _ = _dispatcher.BeginInvoke(() =>
+                {
+                    IsOnline = online;
+                    if (online && string.IsNullOrEmpty(PublicIpSummary))
+                    {
+                        _ = ResolvePublicIpAsync();
+                    }
+                });
             }
             catch
             {
@@ -798,6 +847,37 @@ public sealed class MainViewModel : INotifyPropertyChanged
             }
         }, null, TimeSpan.Zero, TimeSpan.FromSeconds(3));
         OnPropertyChanged(nameof(WindowTitle));
+    }
+
+    public async Task ResolvePublicIpAsync(bool force = false)
+    {
+        if (_isResolvingPublicIp) return;
+        if (!force && (DateTime.UtcNow - _lastPublicIpCheck).TotalSeconds < 30) return;
+
+        _isResolvingPublicIp = true;
+        _lastPublicIpCheck = DateTime.UtcNow;
+
+        try
+        {
+            var info = await _publicIpService.ResolveAsync();
+            if (info != null && info.IsSuccess)
+            {
+                _ = _dispatcher.BeginInvoke(() =>
+                {
+                    _publicIpOnly = info.Ip;
+                    PublicIpSummary = info.SummaryText;
+                });
+                AddActivityLog("IP", $"Resolved public IP & ASN: {info.SummaryText}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to resolve public IP and ASN");
+        }
+        finally
+        {
+            _isResolvingPublicIp = false;
+        }
     }
 
     private void StopInternetCheck()
@@ -1485,6 +1565,7 @@ if ($wifi) {
         // Update network load monitor for new adapter
         var nicForLoad = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(n => n.Id == adapterId);
         if (nicForLoad != null) NetworkLoadHud.UpdateAdapterName(nicForLoad.Name);
+        _ = ResolvePublicIpAsync(force: true);
     }
 
     public async Task SwitchToNextAdapterAsync()

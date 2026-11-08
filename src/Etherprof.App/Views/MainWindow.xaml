@@ -1,4 +1,4 @@
-<Window x:Class="Etherprof.App.Views.MainWindow"
+﻿<Window x:Class="Etherprof.App.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:Etherprof.App.ViewModels"
@@ -287,23 +287,42 @@
 
         <!-- Row 0: Header -->
         <DockPanel Grid.Row="0" Margin="0,0,0,8">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="Etherprof" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
-                <TextBlock Text="{Binding AppVersion}" FontSize="10" FontWeight="Bold" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="{Binding BuildInfo}" />
-                <Border Background="{Binding InternetStatusBrush}" CornerRadius="8" Padding="6,2" VerticalAlignment="Center"
-                        ToolTip="Google DNS (8.8.8.8) background test indicator">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Ellipse Width="6" Height="6" Fill="White" Margin="0,0,4,0" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding InternetStatusText}" FontSize="9" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Border>
-                <Border Background="{Binding MediaLinkBrush}" CornerRadius="8" Padding="6,2" VerticalAlignment="Center" Margin="6,0,0,0"
-                        ToolTip="Physical Media Link Connection State (Link Up / Link Down)">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Ellipse Width="6" Height="6" Fill="White" Margin="0,0,4,0" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding MediaLinkText}" FontSize="9" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Border>
+            <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Etherprof" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
+                    <TextBlock Text="{Binding AppVersion}" FontSize="10" FontWeight="Bold" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="{Binding BuildInfo}" />
+                    <Border Background="{Binding InternetStatusBrush}" CornerRadius="8" Padding="6,2" VerticalAlignment="Center"
+                            ToolTip="Google DNS (8.8.8.8) background test indicator. Click to refresh Public IP &amp; ASN."
+                            Cursor="Hand">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding RefreshPublicIpCommand}" />
+                        </Border.InputBindings>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse Width="6" Height="6" Fill="White" Margin="0,0,4,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding InternetStatusText}" FontSize="9" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                    <Border Background="{Binding MediaLinkBrush}" CornerRadius="8" Padding="6,2" VerticalAlignment="Center" Margin="6,0,0,0"
+                            ToolTip="Physical Media Link Connection State (Link Up / Link Down)">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse Width="6" Height="6" Fill="White" Margin="0,0,4,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding MediaLinkText}" FontSize="9" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Under Online Indicator: Public IP & ASN -->
+                <StackPanel Orientation="Horizontal" Margin="0,2,0,0"
+                            Visibility="{Binding HasPublicIpInfo, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="🌐 " FontSize="9" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding PublicIpSummary}" FontSize="9.5" FontFamily="Consolas, Segoe UI" FontWeight="SemiBold"
+                               Foreground="#0284C7" VerticalAlignment="Center" Cursor="Hand"
+                               ToolTip="Public IPv4 &amp; Autonomous System (ASN). Click to copy to clipboard.">
+                        <TextBlock.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding CopyPublicIpCommand}" />
+                        </TextBlock.InputBindings>
+                    </TextBlock>
+                </StackPanel>
             </StackPanel>
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <Button Style="{StaticResource ActionButton}" Content="⇄ Switch"
@@ -653,23 +672,6 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Grid Margin="0,2">
-                                                <Grid.ContextMenu>
-                                                    <ContextMenu>
-                                                        <MenuItem Header="🌐 Open in Browser"
-                                                                  Command="{Binding DataContext.PingTargetOpenBrowserCommand, Source={x:Reference mainGrid}}"
-                                                                  CommandParameter="{Binding}" />
-                                                        <MenuItem Header="🛤️ Traceroute"
-                                                                  Command="{Binding DataContext.PingTargetTracerouteCommand, Source={x:Reference mainGrid}}"
-                                                                  CommandParameter="{Binding}" />
-                                                        <MenuItem Header="🎯 Ad-hoc Ping Window"
-                                                                  Command="{Binding DataContext.PingTargetAdHocCommand, Source={x:Reference mainGrid}}"
-                                                                  CommandParameter="{Binding}" />
-                                                        <Separator />
-                                                        <MenuItem Header="✕ Remove"
-                                                                  Command="{Binding DataContext.RemovePingTargetCommand, Source={x:Reference mainGrid}}"
-                                                                  CommandParameter="{Binding}" />
-                                                    </ContextMenu>
-                                                </Grid.ContextMenu>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="85" />
                                                     <ColumnDefinition Width="115" />
@@ -1349,6 +1351,9 @@
                                                                   CommandParameter="{Binding}" />
                                                         <MenuItem Header="🛤️ Traceroute"
                                                                   Command="{Binding DataContext.PingTargetTracerouteCommand, Source={x:Reference mainGrid}}"
+                                                                  CommandParameter="{Binding}" />
+                                                        <MenuItem Header="🎯 Ping Similar IP..."
+                                                                  Command="{Binding DataContext.PingTargetSimilarIpCommand, Source={x:Reference mainGrid}}"
                                                                   CommandParameter="{Binding}" />
                                                         <MenuItem Header="🎯 Ad-hoc Ping Window"
                                                                   Command="{Binding DataContext.PingTargetAdHocCommand, Source={x:Reference mainGrid}}"

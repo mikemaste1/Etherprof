@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Threading;
 using Etherprof.Core;
 
 namespace Etherprof.App.Views;
@@ -7,21 +8,42 @@ public partial class AdHocPingDialog : Window
 {
     public string TargetIp { get; private set; } = "";
     public string? TargetLabel { get; private set; }
+    private readonly bool _focusLastOctet;
 
-    public AdHocPingDialog(string prefilledIp)
+    public AdHocPingDialog(string prefilledIp, bool focusLastOctet = true)
     {
         InitializeComponent();
+        _focusLastOctet = focusLastOctet;
         ipBox.Text = prefilledIp;
 
         if (!string.IsNullOrEmpty(prefilledIp))
         {
-            subnetHintText.Text = $"Default gateway / proposed target: {prefilledIp}";
+            int lastDot = prefilledIp.LastIndexOf('.');
+            if (lastDot >= 0 && focusLastOctet)
+            {
+                subnetHintText.Text = $"Network preselected: {prefilledIp.Substring(0, lastDot + 1)}x · Type last octet to ping similar host";
+            }
+            else
+            {
+                subnetHintText.Text = $"Default gateway / proposed target: {prefilledIp}";
+            }
         }
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        FocusYoungerByte();
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            if (_focusLastOctet)
+            {
+                FocusYoungerByte();
+            }
+            else
+            {
+                ipBox.Focus();
+                ipBox.SelectAll();
+            }
+        });
     }
 
     private void FocusYoungerByte()

@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/mikemaste1/Etherprof/releases"><img src="https://img.shields.io/badge/version-v1.0.0-blue.svg" alt="Version" /></a>
+  <a href="https://github.com/mikemaste1/Etherprof/releases"><img src="https://img.shields.io/badge/version-v1.0.1-blue.svg" alt="Version" /></a>
   <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10.0-512BD4.svg" alt=".NET 10" /></a>
   <a href="https://learn.microsoft.com/en-us/windows/package-manager/"><img src="https://img.shields.io/badge/winget-mikemaste1.Etherprof-0078D4.svg" alt="WinGet Package" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT" /></a>
@@ -92,7 +92,7 @@ winget upgrade mikemaste1.Etherprof
 
 ### Method 2: Inno Setup Installer Download
 1. Head to the **[Latest Release](https://github.com/mikemaste1/Etherprof/releases/latest)** page.
-2. Download `Etherprof-Setup-1.0.0.exe`.
+2. Download `Etherprof-Setup-1.0.1.exe`.
 3. Run the installer. It configures standard Program Files installation, Start Menu shortcuts, and uninstaller.
    *(Silent installation is supported via `/VERYSILENT /NORESTART`).*
 
@@ -119,7 +119,7 @@ A single script builds the self-contained publication and compiles the Inno Setu
 .\build-release.ps1
 ```
 The resulting installer is generated at:
-`artifacts/Etherprof-Setup-1.0.0.exe`
+`artifacts/Etherprof-Setup-1.0.1.exe`
 
 For detailed release workflows and WinGet submission instructions, see **[docs/RELEASING.md](docs/RELEASING.md)**.
 

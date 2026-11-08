@@ -36,6 +36,7 @@ public partial class MainWindow : Window
             vm.OpenAdapterSelector = () => ShowAdapterSelector(vm);
             vm.OpenAliasEditorDialog = (bssid, alias) => ShowAliasEditor(vm, bssid, alias);
             vm.OpenAdHocPingDialog = defaultIp => ShowAdHocPingDialog(vm, defaultIp);
+            vm.OpenSimilarIpPingDialog = ip => ShowSimilarIpPingDialog(vm, ip);
             vm.OpenPingPrefixDialog = proposedPrefix => ShowPingPrefixDialog(vm, proposedPrefix);
             vm.OpenBrowserDialogAction = host => ShowBrowserDialogForTarget(host);
             vm.OpenTracerouteDialogAction = host => ShowTracerouteDialogForTarget(host);
@@ -100,6 +101,19 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog() == true && dialog.Result is not null)
         {
             _ = vm.AddOrUpdateTestSetAsync(dialog.Result, existingTestSet is null);
+        }
+    }
+
+    private void ShowSimilarIpPingDialog(MainViewModel vm, string ip)
+    {
+        var dialog = new AdHocPingDialog(ip, focusLastOctet: true)
+        {
+            Owner = this
+        };
+
+        if (dialog.ShowDialog() == true && !string.IsNullOrEmpty(dialog.TargetIp))
+        {
+            _ = vm.StartAdHocPingAsync(dialog.TargetIp, dialog.TargetLabel, false);
         }
     }
 
