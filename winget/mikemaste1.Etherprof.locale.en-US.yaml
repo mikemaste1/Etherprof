@@ -1,7 +1,7 @@
-﻿# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.28.0.schema.json
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.28.0.schema.json
 
 PackageIdentifier: mikemaste1.Etherprof
-PackageVersion: 1.0.0
+PackageVersion: 1.0.1
 PackageLocale: en-US
 Publisher: mikemaste1
 PublisherUrl: https://github.com/mikemaste1
@@ -20,5 +20,9 @@ Tags:
   - wifi
   - diagnostics
   - traceroute
+ReleaseNotes: |-
+  - Added Public IP address display and ASN/organization resolution under the Online indicator with click-to-copy
+  - Added "Ping Similar IP..." context menu option to active ping targets with pre-selected network prefix and last octet focus
+  - Added real-time Network Load HUD tracking interface throughput (Mbps) and session/total traffic
 ManifestType: defaultLocale
 ManifestVersion: 1.28.0
